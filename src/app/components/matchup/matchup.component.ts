@@ -98,20 +98,27 @@ export class MatchupComponent {
   });
 
   otherMatchups = computed(() => {
-    return this.otherMatchupsForWeek().map(matchup => {
-      const team1 = this.supabase.getTeamById(matchup.team1Id)!;
-      const team2 = this.supabase.getTeamById(matchup.team2Id)!;
-      const team1Details = this.getTeamDetails(matchup.team1Id)!;
-      const team2Details = this.getTeamDetails(matchup.team2Id)!;
+    return this.otherMatchupsForWeek()
+      .map(matchup => {
+        const team1 = this.supabase.getTeamById(matchup.team1Id);
+        const team2 = this.supabase.getTeamById(matchup.team2Id);
+        const team1Details = this.getTeamDetails(matchup.team1Id);
+        const team2Details = this.getTeamDetails(matchup.team2Id);
 
-      return {
-        matchup,
-        team1,
-        team2,
-        team1Score: team1Details.totalActualScore,
-        team2Score: team2Details.totalActualScore,
-      }
-    });
+        // If any data is missing, filter this matchup out to prevent crashes.
+        if (!team1 || !team2 || !team1Details || !team2Details) {
+          return null;
+        }
+
+        return {
+          matchup,
+          team1,
+          team2,
+          team1Score: team1Details.totalActualScore,
+          team2Score: team2Details.totalActualScore,
+        };
+      })
+      .filter((m): m is NonNullable<typeof m> => m !== null);
   });
 
   currentWeekStatus = computed(() => this.supabase.getWeekStatus(this.currentWeek()));

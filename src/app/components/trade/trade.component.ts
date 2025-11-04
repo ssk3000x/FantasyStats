@@ -100,9 +100,14 @@ export class TradeComponent {
       this.theirPlayersToRequest().map(p => p.id)
     );
 
-    await this.supabase.refreshData();
+    const refreshed = await this.supabase.refreshData();
     
-    this.uiService.showNotification('Trade proposal sent!', 'success');
+    if (refreshed) {
+      this.uiService.showNotification('Trade proposal sent!', 'success');
+    } else {
+      this.uiService.showNotification('Trade sent, but failed to refresh data. Please reload.', 'error', 5000);
+    }
+    
     this.router.navigate(['/league']);
   }
   

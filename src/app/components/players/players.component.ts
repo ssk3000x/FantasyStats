@@ -95,11 +95,15 @@ export class PlayersComponent {
     if (!playerToAdd || !playerToDrop) return;
 
     await this.supabase.addDropPlayer(playerToAdd.id, playerToDrop);
-    await this.supabase.refreshData();
+    const refreshed = await this.supabase.refreshData();
     
     this.closeModal();
-    
-    this.transactionSuccess.set(true);
-    setTimeout(() => this.transactionSuccess.set(false), 3000);
+
+    if (refreshed) {
+       this.transactionSuccess.set(true);
+       setTimeout(() => this.transactionSuccess.set(false), 3000);
+    } else {
+        this.uiService.showNotification('Player added, but failed to refresh data. Please reload.', 'error', 5000);
+    }
   }
 }

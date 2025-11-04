@@ -27,6 +27,30 @@ import { UiService } from '../../../services/ui.service';
                 <p class="text-sm text-gray-400">Projected Points</p>
                 <p class="font-semibold text-lg text-primary">{{ p.projectedPoints.toFixed(1) }}</p>
               </div>
+
+              @if(p.weeklyScores && p.weeklyScores.length > 0) {
+                <div class="mt-4">
+                  <p class="text-sm text-gray-400 mb-2">Weekly Scores</p>
+                  <div class="max-h-40 overflow-y-auto pr-2">
+                    <table class="w-full text-left">
+                      <thead>
+                        <tr class="border-b border-gray-600 text-xs text-gray-300">
+                          <th class="py-2 font-normal">Week</th>
+                          <th class="py-2 font-normal text-right">Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for(score of p.weeklyScores; track $index) {
+                          <tr class="border-b border-gray-700 last:border-b-0">
+                            <td class="py-2">Week {{ $index + 1 }}</td>
+                            <td class="py-2 text-right font-semibold">{{ score.toFixed(1) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              }
           </div>
         </div>
       </div>

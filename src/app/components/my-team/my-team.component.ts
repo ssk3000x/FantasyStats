@@ -90,10 +90,14 @@ export class MyTeamComponent {
     const newBenchIds = this.tempBench().map(p => p.id);
     
     await this.supabase.updateRoster(newStarterIds, newBenchIds);
-    await this.supabase.refreshData();
+    const refreshed = await this.supabase.refreshData();
 
     this.isEditing.set(false);
-    this.uiService.showNotification('Roster saved!', 'success');
+    if (refreshed) {
+      this.uiService.showNotification('Roster saved!', 'success');
+    } else {
+      this.uiService.showNotification('Roster saved, but failed to refresh data. Please reload.', 'error', 5000);
+    }
   }
   
   isRosterValid = computed(() => this.tempStarters().length === 3);
@@ -117,8 +121,12 @@ export class MyTeamComponent {
   async acceptTrade(tradeId: number) {
     const result = await this.supabase.acceptTrade(tradeId);
     if (result.success) {
-      await this.supabase.refreshData();
-      this.uiService.showNotification('Trade accepted!', 'success');
+      const refreshed = await this.supabase.refreshData();
+      if (refreshed) {
+        this.uiService.showNotification('Trade accepted!', 'success');
+      } else {
+        this.uiService.showNotification('Trade accepted, but failed to refresh data. Please reload.', 'error', 5000);
+      }
     } else {
       this.uiService.showNotification('Failed to accept trade.', 'error');
     }
@@ -126,7 +134,11 @@ export class MyTeamComponent {
 
   async rejectTrade(tradeId: number) {
     await this.supabase.rejectTrade(tradeId);
-    await this.supabase.refreshData();
-    this.uiService.showNotification('Trade rejected.', 'success');
+    const refreshed = await this.supabase.refreshData();
+    if (refreshed) {
+      this.uiService.showNotification('Trade rejected.', 'success');
+    } else {
+      this.uiService.showNotification('Trade rejected, but failed to refresh data. Please reload.', 'error', 5000);
+    }
   }
 }

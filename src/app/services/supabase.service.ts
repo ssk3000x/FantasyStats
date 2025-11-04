@@ -73,29 +73,35 @@ export class SupabaseService {
     this.dataLoaded.set(true);
   }
 
-  private async loadInitialData() {
-    // Fetch all data in parallel for faster loading, mapping snake_case cols to camelCase props
-    const [players, teams, rosters, schedule, tradeProposals] = await Promise.all([
-      this.supabase.from('players').select('id, name, projectedPoints:projected_points, weeklyScores:weekly_scores'),
-      this.supabase.from('teams').select('id, name, wins, losses, ties, pointsFor:points_for'),
-      this.supabase.from('rosters').select('teamId:team_id, starters, bench'),
-      this.supabase.from('schedule').select('id, week, team1Id:team1_id, team2Id:team2_id'),
-      this.supabase.from('trade_proposals').select('id, proposingTeamId:proposing_team_id, receivingTeamId:receiving_team_id, playersOffered:players_offered, playersRequested:players_requested, status')
-    ]);
+  private async loadInitialData(): Promise<boolean> {
+    try {
+      // Fetch all data in parallel for faster loading, mapping snake_case cols to camelCase props
+      const [players, teams, rosters, schedule, tradeProposals] = await Promise.all([
+        this.supabase.from('players').select('id, name, projectedPoints:projected_points, weeklyScores:weekly_scores'),
+        this.supabase.from('teams').select('id, name, wins, losses, ties, pointsFor:points_for'),
+        this.supabase.from('rosters').select('teamId:team_id, starters, bench'),
+        this.supabase.from('schedule').select('id, week, team1Id:team1_id, team2Id:team2_id'),
+        this.supabase.from('trade_proposals').select('id, proposingTeamId:proposing_team_id, receivingTeamId:receiving_team_id, playersOffered:players_offered, playersRequested:players_requested, status')
+      ]);
 
-    this.players.set(players.data ?? []);
-    this.teams.set(teams.data ?? []);
-    this.rosters.set((rosters.data as any) ?? []);
-    this.schedule.set((schedule.data as any) ?? []);
-    this.tradeProposals.set((tradeProposals.data as any) ?? []);
+      this.players.set(players.data ?? []);
+      this.teams.set(teams.data ?? []);
+      this.rosters.set((rosters.data as any) ?? []);
+      this.schedule.set((schedule.data as any) ?? []);
+      this.tradeProposals.set((tradeProposals.data as any) ?? []);
+      return true;
+    } catch (error) {
+      console.error('Failed to load initial data:', error);
+      return false;
+    }
   }
 
   /**
    * Re-fetches all league data from the database.
    * This is called on navigation to ensure data is fresh.
    */
-  public async refreshData() {
-    await this.loadInitialData();
+  public async refreshData(): Promise<boolean> {
+    return await this.loadInitialData();
   }
 
   private listenForAuthStateChanges() {
