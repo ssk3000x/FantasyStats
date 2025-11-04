@@ -1,18 +1,18 @@
 import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './login.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
-  private supabase = inject(SupabaseService);
-  private router = inject(Router);
+  // FIX: Add explicit types to injected services
+  private supabase: SupabaseService = inject(SupabaseService);
+  private router: Router = inject(Router);
 
   teamName = signal('');
   password = signal('');

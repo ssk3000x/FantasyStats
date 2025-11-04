@@ -18,8 +18,9 @@ interface PlayerWithOwner extends Player {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlayersComponent {
-  private supabase = inject(SupabaseService);
-  private uiService = inject(UiService);
+  // FIX: Add explicit types to injected services
+  private supabase: SupabaseService = inject(SupabaseService);
+  private uiService: UiService = inject(UiService);
 
   isLoading = signal(true);
   players = signal<PlayerWithOwner[]>([]);

@@ -1,5 +1,4 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { SupabaseService } from '../../services/supabase.service';
 import { UiService } from '../../services/ui.service';
 import { Player, Roster, Team } from '../../services/types';
@@ -7,13 +6,14 @@ import { Player, Roster, Team } from '../../services/types';
 @Component({
   selector: 'app-my-team',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './my-team.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MyTeamComponent {
-  private supabase = inject(SupabaseService);
-  private uiService = inject(UiService);
+  // FIX: Add explicit types to injected services
+  private supabase: SupabaseService = inject(SupabaseService);
+  private uiService: UiService = inject(UiService);
 
   myTeam = signal<Team | null>(null);
   myRoster = signal<Roster | null>(null);

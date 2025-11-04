@@ -26,8 +26,9 @@ interface ComparisonRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MatchupComponent {
-  private supabase = inject(SupabaseService);
-  private uiService = inject(UiService);
+  // FIX: Add explicit types to injected services
+  private supabase: SupabaseService = inject(SupabaseService);
+  private uiService: UiService = inject(UiService);
 
   myTeamId = signal<number | null>(this.supabase.getMyTeam()?.id ?? null);
   currentWeek = signal<number>(this.supabase.getCurrentFantasyWeek());

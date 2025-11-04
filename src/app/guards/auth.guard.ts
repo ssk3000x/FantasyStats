@@ -3,8 +3,9 @@ import { CanActivateFn, Router } from '@angular/router';
 import { SupabaseService } from '../services/supabase.service';
 
 export const authGuard: CanActivateFn = () => {
-  const supabase = inject(SupabaseService);
-  const router = inject(Router);
+  // FIX: Add explicit types to injected services
+  const supabase: SupabaseService = inject(SupabaseService);
+  const router: Router = inject(Router);
 
   if (supabase.isAuthenticated()) {
     return true;
@@ -15,8 +16,9 @@ export const authGuard: CanActivateFn = () => {
 };
 
 export const loginGuard: CanActivateFn = () => {
-    const supabase = inject(SupabaseService);
-    const router = inject(Router);
+    // FIX: Add explicit types to injected services
+    const supabase: SupabaseService = inject(SupabaseService);
+    const router: Router = inject(Router);
 
     if (supabase.isAuthenticated()) {
         router.navigate(['/my-team']);

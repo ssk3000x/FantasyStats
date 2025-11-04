@@ -54,7 +54,8 @@ import { UiService } from '../../../services/ui.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlayerDetailModalComponent {
-  private uiService = inject(UiService);
+  // FIX: Add explicit type to injected service
+  private uiService: UiService = inject(UiService);
   player = this.uiService.selectedPlayer;
 
   close() {

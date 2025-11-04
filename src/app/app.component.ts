@@ -14,8 +14,9 @@ import { PlayerDetailModalComponent } from './components/shared/player-detail-mo
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
-  private supabase = inject(SupabaseService);
-  private router = inject(Router);
+  // FIX: Add explicit types to injected services
+  private supabase: SupabaseService = inject(SupabaseService);
+  private router: Router = inject(Router);
 
   isAuthenticated = signal(this.supabase.isAuthenticated());
 

@@ -14,8 +14,9 @@ type ActiveTab = 'standings' | 'settings';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LeagueComponent {
-  private supabase = inject(SupabaseService);
-  private router = inject(Router);
+  // FIX: Add explicit types to injected services
+  private supabase: SupabaseService = inject(SupabaseService);
+  private router: Router = inject(Router);
 
   activeTab = signal<ActiveTab>('standings');
   teams = signal<Team[]>([]);
