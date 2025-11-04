@@ -68,7 +68,6 @@ export class SupabaseService {
     
     // Now that the initial state is set, set up listeners for future changes.
     this.listenForAuthStateChanges();
-    this.subscribeToRealtimeChanges();
 
     // Signal that all necessary data is loaded and the app is ready to display.
     this.dataLoaded.set(true);
@@ -91,6 +90,14 @@ export class SupabaseService {
     this.tradeProposals.set((tradeProposals.data as any) ?? []);
   }
 
+  /**
+   * Re-fetches all league data from the database.
+   * This is called on navigation to ensure data is fresh.
+   */
+  public async refreshData() {
+    await this.loadInitialData();
+  }
+
   private listenForAuthStateChanges() {
      this.supabase.auth.onAuthStateChange(async (event, session) => {
       this.currentUser.set(session?.user ?? null);
@@ -104,24 +111,6 @@ export class SupabaseService {
         window.sessionStorage.removeItem(USER_SESSION_KEY);
       }
     });
-  }
-  
-  private subscribeToRealtimeChanges() {
-    // Realtime subscription for rosters
-    this.supabase.channel('rosters')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rosters' }, async () => {
-        const { data } = await this.supabase.from('rosters').select('teamId:team_id, starters, bench');
-        this.rosters.set((data as any) ?? []);
-      })
-      .subscribe();
-
-    // Realtime subscription for trade proposals
-    this.supabase.channel('trade_proposals')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'trade_proposals' }, async () => {
-        const { data } = await this.supabase.from('trade_proposals').select('id, proposingTeamId:proposing_team_id, receivingTeamId:receiving_team_id, playersOffered:players_offered, playersRequested:players_requested, status');
-        this.tradeProposals.set((data as any) ?? []);
-      })
-      .subscribe();
   }
 
   // --- Auth ---
@@ -249,8 +238,12 @@ export class SupabaseService {
     const roster = this.getMyRoster();
     if (!teamId || !roster) return;
     
-    const newStarters = roster.starters.filter(id => id !== playerToDropId);
-    const newBench = roster.bench.filter(id => id !== playerToDropId);
+    // FIX: Handle null starter/bench arrays to prevent runtime errors.
+    const currentStarters = roster.starters ?? [];
+    const currentBench = roster.bench ?? [];
+
+    const newStarters = currentStarters.filter(id => id !== playerToDropId);
+    const newBench = currentBench.filter(id => id !== playerToDropId);
     newBench.push(playerToAddId);
 
     await this.supabase

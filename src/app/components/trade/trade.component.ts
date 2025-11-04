@@ -99,6 +99,8 @@ export class TradeComponent {
       this.myPlayersToOffer().map(p => p.id),
       this.theirPlayersToRequest().map(p => p.id)
     );
+
+    await this.supabase.refreshData();
     
     this.uiService.showNotification('Trade proposal sent!', 'success');
     this.router.navigate(['/league']);

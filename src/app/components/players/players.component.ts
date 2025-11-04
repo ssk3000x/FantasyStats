@@ -37,7 +37,12 @@ export class PlayersComponent {
     const teams = this.supabase.getTeams();
 
     return players.map(player => {
-        const ownerRoster = rosters.find(r => r.starters.includes(player.id) || r.bench.includes(player.id));
+        // FIX: Add null checks for r.starters and r.bench to prevent runtime errors
+        // if the database returns null instead of an empty array.
+        const ownerRoster = rosters.find(r => 
+            (r.starters && r.starters.includes(player.id)) || 
+            (r.bench && r.bench.includes(player.id))
+        );
         const ownerTeam = ownerRoster ? teams.find(t => t.id === ownerRoster.teamId) : null;
         return { ...player, ownerTeamName: ownerTeam?.name ?? null };
     });
@@ -90,6 +95,8 @@ export class PlayersComponent {
     if (!playerToAdd || !playerToDrop) return;
 
     await this.supabase.addDropPlayer(playerToAdd.id, playerToDrop);
+    await this.supabase.refreshData();
+    
     this.closeModal();
     
     this.transactionSuccess.set(true);
