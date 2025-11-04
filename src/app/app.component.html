@@ -6,4 +6,13 @@
     <app-nav></app-nav>
   }
   <app-player-detail-modal></app-player-detail-modal>
+  
+  <!-- Global Notification Toast -->
+  @if (uiService.notification(); as notification) {
+    <div 
+      class="fixed top-5 right-5 z-[100] px-6 py-3 rounded-lg shadow-lg animate-fade-in-out"
+      [class]="notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'">
+      {{ notification.message }}
+    </div>
+  }
 </div>

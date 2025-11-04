@@ -5,6 +5,8 @@ import { MyTeamComponent } from './components/my-team/my-team.component';
 import { MatchupComponent } from './components/matchup/matchup.component';
 import { PlayersComponent } from './components/players/players.component';
 import { LeagueComponent } from './components/league/league.component';
+import { TradeComponent } from './components/trade/trade.component';
+import { InitialSetupComponent } from './components/initial-setup/initial-setup.component';
 
 export const APP_ROUTES: Routes = [
   {
@@ -30,6 +32,16 @@ export const APP_ROUTES: Routes = [
   {
     path: 'league',
     component: LeagueComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'trade/:teamId',
+    component: TradeComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'team/:teamId',
+    component: InitialSetupComponent,
     canActivate: [authGuard]
   },
   {

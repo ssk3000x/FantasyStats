@@ -1,4 +1,4 @@
-import { Player, Team, Roster, ScheduledMatchup } from './types';
+import { Player, Team, Roster, ScheduledMatchup, TradeProposal } from './types';
 
 const playerNames = [
   'Vedh Atmakuri', 'Rachel Chen', 'Isabella Cruz', 'Daniel Garcia', 'Chase Gonzalez', 
@@ -34,13 +34,13 @@ const teams: Team[] = [
 
 const rosters: Roster[] = [
   // Swarchis
-  { teamId: 1, starters: [101, 102, 103], bench: [104] },
+  { teamId: 1, starters: [101, 102, 103], bench: [104, 117] },
   // Gabriel
-  { teamId: 2, starters: [105, 106, 107], bench: [108] },
+  { teamId: 2, starters: [105, 106, 107], bench: [108, 119] },
   // Rihito
-  { teamId: 3, starters: [109, 110, 111], bench: [112] },
+  { teamId: 3, starters: [109, 110, 111], bench: [112, 121] },
   // Daniel
-  { teamId: 4, starters: [113, 114, 115], bench: [116] },
+  { teamId: 4, starters: [113, 114, 115], bench: [116, 123] },
 ];
 
 const schedule: ScheduledMatchup[] = [
@@ -52,9 +52,12 @@ const schedule: ScheduledMatchup[] = [
   { week: 2, team1Id: 2, team2Id: 4 }, // Gabriel vs Daniel
 ];
 
+const tradeProposals: TradeProposal[] = [];
+
 export const MOCK_DATA = {
   players,
   teams,
   rosters,
   schedule,
+  tradeProposals,
 };

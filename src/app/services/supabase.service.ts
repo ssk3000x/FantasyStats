@@ -1,6 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { MOCK_DATA } from './mock-data';
-import { Player, Roster, ScheduledMatchup, Team } from './types';
+import { Player, Roster, ScheduledMatchup, Team, TradeProposal } from './types';
 
 const USER_SESSION_KEY = 'fantasy_user_team_id';
 
@@ -20,8 +20,15 @@ export class SupabaseService {
   private teams = signal<Team[]>(MOCK_DATA.teams);
   private rosters = signal<Roster[]>(MOCK_DATA.rosters);
   private schedule = signal<ScheduledMatchup[]>(MOCK_DATA.schedule);
+  private tradeProposals = signal<TradeProposal[]>(MOCK_DATA.tradeProposals);
 
   private loggedInTeamId = signal<number | null>(null);
+  
+  hasPendingTrades = computed(() => {
+    const myId = this.loggedInTeamId();
+    if (!myId) return false;
+    return this.tradeProposals().some(t => t.receivingTeamId === myId && t.status === 'pending');
+  });
 
   constructor() {
     if (typeof window !== 'undefined' && window.sessionStorage) {
@@ -56,7 +63,7 @@ export class SupabaseService {
     return this.loggedInTeamId() !== null;
   }
   
-  private getLoggedInTeamId(): number | null {
+  getLoggedInTeamId(): number | null {
       return this.loggedInTeamId();
   }
 
@@ -105,6 +112,10 @@ export class SupabaseService {
 
   getRosters(): Roster[] {
     return [...this.rosters()];
+  }
+
+  getRosterForTeam(teamId: number): Roster | undefined {
+    return this.rosters().find(r => r.teamId === teamId);
   }
   
   getSchedule(): ScheduledMatchup[] {
@@ -155,6 +166,86 @@ export class SupabaseService {
       }
       return [...rosters];
     });
+  }
+
+  // --- Trades ---
+  getTradeProposalsForTeam(teamId: number): TradeProposal[] {
+    return this.tradeProposals().filter(t => t.receivingTeamId === teamId && t.status === 'pending');
+  }
+
+  async createTradeProposal(receivingTeamId: number, playersOffered: number[], playersRequested: number[]): Promise<void> {
+    const proposingTeamId = this.getLoggedInTeamId();
+    if (!proposingTeamId) return;
+
+    const newProposal: TradeProposal = {
+      id: Date.now(), // simple unique id
+      proposingTeamId,
+      receivingTeamId,
+      playersOffered,
+      playersRequested,
+      status: 'pending'
+    };
+    this.tradeProposals.update(proposals => [...proposals, newProposal]);
+  }
+  
+  async rejectTrade(tradeId: number): Promise<void> {
+      this.tradeProposals.update(proposals => {
+          const tradeIndex = proposals.findIndex(t => t.id === tradeId);
+          if (tradeIndex > -1) {
+              proposals[tradeIndex].status = 'rejected';
+          }
+          return [...proposals];
+      });
+  }
+
+  async acceptTrade(tradeId: number): Promise<{ success: boolean }> {
+    const trade = this.tradeProposals().find(t => t.id === tradeId);
+    if (!trade || trade.status !== 'pending') return { success: false };
+
+    const { proposingTeamId, receivingTeamId, playersOffered, playersRequested } = trade;
+
+    this.rosters.update(currentRosters => {
+      const proposerRosterIndex = currentRosters.findIndex(r => r.teamId === proposingTeamId);
+      const receiverRosterIndex = currentRosters.findIndex(r => r.teamId === receivingTeamId);
+
+      if (proposerRosterIndex === -1 || receiverRosterIndex === -1) {
+        return currentRosters;
+      }
+
+      const proposerRoster = currentRosters[proposerRosterIndex];
+      const receiverRoster = currentRosters[receiverRosterIndex];
+
+      // Remove players from original owners
+      // Proposer gives away playersOffered
+      const proposerNewStarters = proposerRoster.starters.filter(id => !playersOffered.includes(id));
+      const proposerNewBench = proposerRoster.bench.filter(id => !playersOffered.includes(id));
+
+      // Receiver gives away playersRequested
+      const receiverNewStarters = receiverRoster.starters.filter(id => !playersRequested.includes(id));
+      const receiverNewBench = receiverRoster.bench.filter(id => !playersRequested.includes(id));
+
+      // Add players to new owners' benches
+      // Proposer receives playersRequested
+      proposerNewBench.push(...playersRequested);
+      // Receiver receives playersOffered
+      receiverNewBench.push(...playersOffered);
+
+      // Update rosters in the array
+      currentRosters[proposerRosterIndex] = { ...proposerRoster, starters: proposerNewStarters, bench: proposerNewBench };
+      currentRosters[receiverRosterIndex] = { ...receiverRoster, starters: receiverNewStarters, bench: receiverNewBench };
+
+      return [...currentRosters];
+    });
+
+    this.tradeProposals.update(proposals => {
+      const tradeIndex = proposals.findIndex(t => t.id === tradeId);
+      if (tradeIndex !== -1) {
+        proposals[tradeIndex].status = 'accepted';
+      }
+      return [...proposals];
+    });
+
+    return { success: true };
   }
   
   // --- UI Helpers ---

@@ -32,3 +32,12 @@ export interface ScheduledMatchup {
   team1Id: number;
   team2Id: number;
 }
+
+export interface TradeProposal {
+  id: number;
+  proposingTeamId: number;
+  receivingTeamId: number;
+  playersOffered: number[]; // player ids
+  playersRequested: number[]; // player ids
+  status: 'pending' | 'accepted' | 'rejected';
+}

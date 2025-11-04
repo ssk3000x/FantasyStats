@@ -5,18 +5,21 @@ import { NavComponent } from './components/layout/nav/nav.component';
 import { SupabaseService } from './services/supabase.service';
 import { filter } from 'rxjs';
 import { PlayerDetailModalComponent } from './components/shared/player-detail-modal/player-detail-modal.component';
+import { UiService } from './services/ui.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, RouterOutlet, NavComponent, PlayerDetailModalComponent],
   templateUrl: './app.component.html',
+  styleUrl: './app.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
   // FIX: Add explicit types to injected services
   private supabase: SupabaseService = inject(SupabaseService);
   private router: Router = inject(Router);
+  uiService: UiService = inject(UiService);
 
   isAuthenticated = signal(this.supabase.isAuthenticated());
 

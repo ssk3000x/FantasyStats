@@ -2,14 +2,14 @@ import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@a
 import { CommonModule } from '@angular/common';
 import { SupabaseService } from '../../services/supabase.service';
 import { Team } from '../../services/types';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 type ActiveTab = 'standings' | 'settings';
 
 @Component({
   selector: 'app-league',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './league.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -20,6 +20,7 @@ export class LeagueComponent {
 
   activeTab = signal<ActiveTab>('standings');
   teams = signal<Team[]>([]);
+  myTeamId = signal<number | null>(null);
 
   sortedTeams = computed(() => {
     return [...this.teams()].sort((a, b) => {
@@ -33,14 +34,17 @@ export class LeagueComponent {
   getTeamColorClass = this.supabase.getTeamColorClass;
 
   constructor() {
-    // FIX: The service method getTeams returns an array directly, not an Observable.
-    // Removed .subscribe() call and replaced with direct assignment.
     const teams = this.supabase.getTeams();
     this.teams.set(teams);
+    this.myTeamId.set(this.supabase.getLoggedInTeamId());
   }
 
   logout() {
     this.supabase.logout();
     this.router.navigate(['/login']);
+  }
+
+  proposeTrade(teamId: number) {
+    this.router.navigate(['/trade', teamId]);
   }
 }

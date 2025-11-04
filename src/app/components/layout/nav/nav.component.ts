@@ -1,5 +1,6 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { SupabaseService } from '../../../services/supabase.service';
 
 @Component({
   selector: 'app-nav',
@@ -9,6 +10,9 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NavComponent {
+  private supabase = inject(SupabaseService);
+  hasPendingTrades = this.supabase.hasPendingTrades;
+  
   navItems = [
     { path: '/my-team', label: 'My Team', icon: 'M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z' },
     { path: '/matchup', label: 'Matchup', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
