@@ -1,12 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
   <title>FantasyStats</title>
-  <link rel="icon" href="assets/icon.svg">
-  <link rel="apple-touch-icon" href="assets/icon.svg">
-  <meta name="theme-color" content="#111827">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- App Icons and Manifest -->
+  <link rel="icon" type="image/jpeg" href="assets/IMG_9053.JPG">
+  <link rel="apple-touch-icon" href="assets/IMG_9053.JPG">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- PWA Meta Tags for iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FantasyStats">
+  
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -24,6 +33,8 @@
       }
     }
   </script>
+
+  <!-- ES Module Imports -->
   <script type="importmap">
   {
     "imports": {
@@ -45,6 +56,5 @@
 </head>
 <body class="bg-gray-900">
   <app-root></app-root>
-  <script type="module" src="index.tsx"></script>
 </body>
 </html>

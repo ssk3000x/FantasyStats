@@ -1,0 +1,22 @@
+{
+  "short_name": "FantasyStats",
+  "name": "FantasyStats League Manager",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#14b8a6",
+  "icons": [
+    {
+      "src": "assets/IMG_9053.JPG",
+      "type": "image/jpeg",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/IMG_9053.JPG",
+      "type": "image/jpeg",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
