@@ -1,0 +1,99 @@
+<div class="md:ml-20 lg:ml-56 p-4 md:p-6 lg:p-8 relative">
+  <div class="container mx-auto">
+    <header class="mb-6">
+      <h1 class="text-3xl md:text-4xl font-bold text-center text-primary">Waiver Wire</h1>
+    </header>
+
+    <div class="mb-6 flex justify-center space-x-1 sm:space-x-2 flex-wrap">
+      @for (pos of positions; track pos) {
+      <button (click)="filterPosition.set(pos)"
+        [class]="'px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition mb-2 ' + (filterPosition() === pos ? 'bg-primary text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300')">
+        {{ pos }}
+      </button>
+      }
+    </div>
+
+    @if (isLoading()) {
+    <p class="text-center text-gray-400">Loading players...</p>
+    } @else {
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      @for (player of filteredPlayers(); track player.id) {
+      <div class="bg-gray-800 p-4 rounded-lg shadow-md flex flex-col justify-between">
+        <div>
+          <button (click)="showPlayerDetails(player)" class="font-semibold text-lg text-white text-left hover:text-primary transition">{{ player.name }}</button>
+          <p class="text-gray-400 text-sm">{{ player.position }} - {{ player.team }}</p>
+        </div>
+        <div class="mt-3">
+          @if (player.ownerTeamName) {
+          <div class="text-xs text-center bg-gray-600 text-gray-300 rounded-full px-3 py-1 truncate">
+            Owned by <span class="font-bold" [class]="getTeamColorClass(player.ownerTeamName)">{{ player.ownerTeamName }}</span>
+          </div>
+          } @else {
+          <button (click)="openAddPlayerModal(player)"
+            class="w-full text-xs text-center bg-green-600 text-white font-semibold rounded-full px-3 py-1 hover:bg-green-700 transition">
+            + Add Player
+          </button>
+          }
+        </div>
+      </div>
+      } @empty {
+      <p class="text-center col-span-full text-gray-400">No players found for this position.</p>
+      }
+    </div>
+    }
+  </div>
+
+  <!-- Add Player Modal -->
+  @if (isModalOpen() && selectedPlayerToAdd(); as playerToAdd) {
+  <div class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md m-4">
+      <div class="p-6">
+        <h3 class="text-2xl font-bold text-white mb-2">Add Player</h3>
+        <p class="text-gray-400 mb-4">You are adding <span class="font-bold text-primary">{{ playerToAdd.name }}</span>. Select a player to drop from your bench.</p>
+
+        <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
+          @for (benchPlayer of myBench(); track benchPlayer.id) {
+            <label [for]="'player-' + benchPlayer.id"
+              class="flex items-center p-3 rounded-lg border-2 transition cursor-pointer"
+              [class]="playerToDropId() === benchPlayer.id ? 'bg-primary border-primary' : 'bg-gray-700 border-gray-600 hover:border-gray-500'">
+              <input type="radio" name="dropPlayer" [id]="'player-' + benchPlayer.id" [value]="benchPlayer.id" (change)="playerToDropId.set(benchPlayer.id)" class="hidden">
+              <div class="flex-grow">
+                  <p class="font-semibold text-white">{{ benchPlayer.name }}</p>
+                  <p class="text-sm text-gray-400">{{ benchPlayer.position }} - {{ benchPlayer.team }}</p>
+              </div>
+            </label>
+          } @empty {
+             <p class="text-gray-400 text-center p-4">Your bench is empty. You must have a player to drop.</p>
+          }
+        </div>
+      </div>
+
+      <div class="bg-gray-700 px-6 py-4 flex justify-end space-x-3 rounded-b-lg">
+        <button (click)="closeModal()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition">Cancel</button>
+        <button 
+          (click)="confirmAddDrop()"
+          [disabled]="!playerToDropId()"
+          class="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-hover transition disabled:bg-gray-500 disabled:cursor-not-allowed">
+          Confirm Add/Drop
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Success Toast -->
+  @if (transactionSuccess()) {
+    <div class="fixed top-24 right-4 md:right-8 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in-out">
+      Player added successfully!
+    </div>
+  }
+</div>
+<style>
+  @keyframes fade-in-out {
+    0%, 100% { opacity: 0; transform: translateY(-20px); }
+    10%, 90% { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in-out {
+    animation: fade-in-out 3s ease-in-out forwards;
+  }
+</style>

@@ -1,0 +1,65 @@
+<div class="md:ml-20 lg:ml-56 p-4 md:p-6 lg:p-8">
+  <div class="container mx-auto">
+    <header class="mb-6 text-center">
+      <h1 class="text-3xl md:text-4xl font-bold text-primary">League Info</h1>
+    </header>
+
+    <div class="mb-6 border-b border-gray-700">
+        <nav class="flex justify-center -mb-px space-x-6">
+            <button (click)="activeTab.set('standings')"
+                    [class]="'px-4 py-3 font-semibold border-b-2 transition ' + (activeTab() === 'standings' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-200 hover:border-gray-500')">
+                Standings
+            </button>
+            <button (click)="activeTab.set('settings')"
+                    [class]="'px-4 py-3 font-semibold border-b-2 transition ' + (activeTab() === 'settings' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-200 hover:border-gray-500')">
+                Settings
+            </button>
+        </nav>
+    </div>
+
+    @if (activeTab() === 'standings') {
+      <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-gray-600 text-sm text-gray-400">
+                        <th class="p-3">Rank</th>
+                        <th class="p-3">Team Name</th>
+                        <th class="p-3 text-center">Record</th>
+                        <th class="p-3 text-right">Points For</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (team of sortedTeams(); track team.id; let i = $index) {
+                      <tr class="border-b border-gray-700">
+                          <td class="p-3 font-bold">{{ i + 1 }}</td>
+                          <td class="p-3 font-semibold" [class]="getTeamColorClass(team.name)">{{ team.name }}</td>
+                          <td class="p-3 text-center">{{ team.wins }} - {{ team.losses }}</td>
+                          <td class="p-3 text-right">{{ team.pointsFor.toFixed(2) }}</td>
+                      </tr>
+                    } @empty {
+                        <tr>
+                            <td colspan="4" class="p-4 text-center text-gray-500">No teams in the league yet.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'settings') {
+      <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg max-w-md mx-auto">
+        <h2 class="text-2xl font-bold mb-4">Settings</h2>
+         <div class="space-y-4">
+            <p class="text-gray-400">Manage your application settings here.</p>
+            <div>
+              <button (click)="logout()" class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition">
+                  Log Out
+              </button>
+            </div>
+         </div>
+      </div>
+    }
+  </div>
+</div>

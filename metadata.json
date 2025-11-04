@@ -1,0 +1,5 @@
+{
+  "name": "FantasyStats",
+  "description": "A streamlined fantasy football league manager. Create your team, manage your roster, track weekly matchups, and dominate the waiver wire. This app uses anonymous authentication to get you into the game quickly.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,9 @@
+<div class="bg-gray-900 text-white min-h-screen font-sans">
+  <main class="pb-20 md:pb-0">
+    <router-outlet></router-outlet>
+  </main>
+  @if (isAuthenticated()) {
+    <app-nav></app-nav>
+  }
+  <app-player-detail-modal></app-player-detail-modal>
+</div>

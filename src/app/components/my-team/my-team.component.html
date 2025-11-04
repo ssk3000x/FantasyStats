@@ -1,0 +1,107 @@
+<div class="md:ml-20 lg:ml-56 p-4 md:p-6 lg:p-8">
+  <div class="container mx-auto">
+    @if (myTeam(); as team) {
+    <header class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold" [class]="teamColorClass()">{{ team.name }}</h1>
+        <p class="text-gray-400">{{ team.wins }}W - {{ team.losses }}L - {{ team.ties }}T</p>
+      </div>
+       <div class="flex space-x-2">
+         @if (isEditing()) {
+          <button (click)="saveRoster()" class="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition">Save</button>
+          <button (click)="toggleEdit()" class="px-4 py-2 text-sm font-semibold text-white bg-gray-600 rounded-lg hover:bg-gray-500 transition">Cancel</button>
+         } @else {
+          <button (click)="toggleEdit()" class="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition">Edit Lineup</button>
+         }
+       </div>
+    </header>
+
+    <main>
+      <!-- STARTERS -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold mb-3 border-b-2 border-gray-700 pb-2 flex justify-between items-baseline">
+          <span>Starters</span>
+          <span class="text-sm text-gray-400">
+            @if(isEditing()){
+              {{ tempStarters().length }} / 3
+            } @else {
+              {{ starters().length }} / 3
+            }
+          </span>
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          @if (isEditing()) {
+            @for (player of tempStarters(); track player.id) {
+              <div class="bg-gray-800 p-3 rounded-lg flex items-center">
+                <img [src]="player.imageUrl" [alt]="player.name" class="w-12 h-12 rounded-full mr-4 object-cover">
+                <div class="flex-grow">
+                  <p class="font-semibold">{{ player.name }}</p>
+                  <p class="text-sm text-gray-400">{{ player.position }} - {{ player.team }}</p>
+                </div>
+                <button (click)="moveToBench(player)" [disabled]="!canMoveToBench()" class="px-3 py-1 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition disabled:bg-gray-500 disabled:cursor-not-allowed">Bench</button>
+              </div>
+            }
+          } @else {
+            @for (player of starters(); track player.id) {
+            <div (click)="showPlayerDetails(player)" class="bg-gray-800 p-3 rounded-lg flex items-center cursor-pointer hover:bg-gray-700 transition-colors">
+              <img [src]="player.imageUrl" [alt]="player.name" class="w-12 h-12 rounded-full mr-4 object-cover">
+              <div class="flex-grow">
+                <p class="font-semibold">{{ player.name }}</p>
+                <p class="text-sm text-gray-400">{{ player.position }} - {{ player.team }}</p>
+              </div>
+              <div class="ml-auto text-right">
+                <p class="font-bold text-lg text-primary">{{ player.projectedPoints.toFixed(1) }}</p>
+              </div>
+            </div>
+            }
+          }
+        </div>
+      </section>
+
+      <!-- BENCH -->
+      <section>
+         <h2 class="text-xl font-semibold mb-3 border-b-2 border-gray-700 pb-2 flex justify-between items-baseline">
+          <span>Bench</span>
+           <span class="text-sm text-gray-400">
+            @if(isEditing()){
+              {{ tempBench().length }} / 1
+            } @else {
+              {{ bench().length }} / 1
+            }
+          </span>
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          @if (isEditing()) {
+            @for (player of tempBench(); track player.id) {
+              <div class="bg-gray-800 p-3 rounded-lg flex items-center">
+                <img [src]="player.imageUrl" [alt]="player.name" class="w-12 h-12 rounded-full mr-4 object-cover">
+                <div class="flex-grow">
+                  <p class="font-semibold">{{ player.name }}</p>
+                  <p class="text-sm text-gray-400">{{ player.position }} - {{ player.team }}</p>
+                </div>
+                <button (click)="moveToStarters(player)" [disabled]="!canMoveToStarters()" class="px-3 py-1 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition disabled:bg-gray-500 disabled:cursor-not-allowed">Start</button>
+              </div>
+            }
+          } @else {
+            @for (player of bench(); track player.id) {
+              <div (click)="showPlayerDetails(player)" class="bg-gray-800 p-3 rounded-lg flex items-center cursor-pointer hover:bg-gray-700 transition-colors">
+                <img [src]="player.imageUrl" [alt]="player.name" class="w-12 h-12 rounded-full mr-4 object-cover">
+                <div class="flex-grow">
+                  <p class="font-semibold">{{ player.name }}</p>
+                  <p class="text-sm text-gray-400">{{ player.position }} - {{ player.team }}</p>
+                </div>
+                <div class="ml-auto text-right">
+                  <p class="font-bold text-lg text-primary">{{ player.projectedPoints.toFixed(1) }}</p>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </section>
+    </main>
+
+    } @else {
+    <p class="text-center text-gray-400">Loading your team...</p>
+    }
+  </div>
+</div>
