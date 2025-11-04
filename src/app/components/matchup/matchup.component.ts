@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SupabaseService } from '../../services/supabase.service';
 import { UiService } from '../../services/ui.service';
@@ -26,32 +26,27 @@ interface ComparisonRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MatchupComponent {
-  // FIX: Add explicit types to injected services
   private supabase: SupabaseService = inject(SupabaseService);
   private uiService: UiService = inject(UiService);
 
-  myTeamId = signal<number | null>(this.supabase.getMyTeam()?.id ?? null);
+  myTeamId = computed(() => this.supabase.getLoggedInTeamId());
   currentWeek = signal<number>(this.supabase.getCurrentFantasyWeek());
   
-  currentMatchup = signal<ScheduledMatchup | null>(null);
-  otherMatchupsForWeek = signal<ScheduledMatchup[]>([]);
-
-  constructor() {
-    effect(() => {
-      this.loadMatchupForWeek(this.currentWeek());
-    });
-  }
-
-  loadMatchupForWeek(week: number) {
+  allMatchupsForWeek = computed(() => {
+    return this.supabase.getMatchupsForWeek(this.currentWeek());
+  });
+  
+  currentMatchup = computed(() => {
     const teamId = this.myTeamId();
-    if (!teamId) return;
-
-    const allWeekMatchups = this.supabase.getMatchupsForWeek(week);
-    const myMatchup = allWeekMatchups.find(m => m.team1Id === teamId || m.team2Id === teamId) ?? null;
-    
-    this.currentMatchup.set(myMatchup);
-    this.otherMatchupsForWeek.set(allWeekMatchups.filter(m => m !== myMatchup));
-  }
+    if (!teamId) return null;
+    const matchups = this.allMatchupsForWeek();
+    return matchups.find(m => m.team1Id === teamId || m.team2Id === teamId) ?? null;
+  });
+  
+  otherMatchupsForWeek = computed(() => {
+    const myMatchup = this.currentMatchup();
+    return this.allMatchupsForWeek().filter(m => m !== myMatchup);
+  });
 
   private getTeamDetails(teamId: number | null): TeamMatchupDetails | null {
     if (!teamId) return null;

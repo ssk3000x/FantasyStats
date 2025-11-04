@@ -13,9 +13,6 @@
       }
     </div>
 
-    @if (isLoading()) {
-    <p class="text-center text-gray-400">Loading players...</p>
-    } @else {
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       @for (player of filteredPlayers(); track player.id) {
       <div class="bg-gray-800 p-4 rounded-lg shadow-md flex flex-col justify-between">
@@ -39,7 +36,6 @@
       <p class="text-center col-span-full text-gray-400">No players found for this filter.</p>
       }
     </div>
-    }
   </div>
 
   <!-- Add Player Modal -->

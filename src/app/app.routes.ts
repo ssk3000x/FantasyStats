@@ -6,7 +6,7 @@ import { MatchupComponent } from './components/matchup/matchup.component';
 import { PlayersComponent } from './components/players/players.component';
 import { LeagueComponent } from './components/league/league.component';
 import { TradeComponent } from './components/trade/trade.component';
-import { InitialSetupComponent } from './components/initial-setup/initial-setup.component';
+import { TeamDetailComponent } from './components/initial-setup/initial-setup.component';
 
 export const APP_ROUTES: Routes = [
   {
@@ -41,7 +41,7 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: 'team/:teamId',
-    component: InitialSetupComponent,
+    component: TeamDetailComponent,
     canActivate: [authGuard]
   },
   {

@@ -18,43 +18,37 @@ interface TradeProposalDetails {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MyTeamComponent {
-  // FIX: Add explicit types to injected services
   private supabase: SupabaseService = inject(SupabaseService);
   private uiService: UiService = inject(UiService);
 
-  myTeam = signal<Team | null>(null);
-  myRoster = signal<Roster | null>(null);
+  myTeam = computed(() => this.supabase.getMyTeam());
+  myRoster = computed(() => this.supabase.getMyRoster());
   isEditing = signal(false);
   
   // For editing state
   tempStarters = signal<Player[]>([]);
   tempBench = signal<Player[]>([]);
 
-  pendingTrades = signal<TradeProposalDetails[]>([]);
-
-  constructor() {
-    this.loadTeamData();
-    this.loadTradeProposals();
-  }
-
-  loadTeamData() {
-    this.myTeam.set(this.supabase.getMyTeam());
-    this.myRoster.set(this.supabase.getMyRoster());
-  }
-
-  loadTradeProposals() {
+  pendingTrades = computed<TradeProposalDetails[]>(() => {
     const myTeamId = this.supabase.getLoggedInTeamId();
-    if (!myTeamId) return;
+    if (!myTeamId) return [];
 
     const proposals = this.supabase.getTradeProposalsForTeam(myTeamId);
-    const detailedProposals = proposals.map(p => ({
-      id: p.id,
-      proposingTeam: this.supabase.getTeamById(p.proposingTeamId)!,
-      playersOffered: this.populatePlayers(p.playersOffered),
-      playersRequested: this.populatePlayers(p.playersRequested),
-    }));
-    this.pendingTrades.set(detailedProposals);
-  }
+    return proposals.map(p => {
+      const proposingTeam = this.supabase.getTeamById(p.proposingTeamId);
+      // Ensure proposing team exists to prevent runtime errors
+      if (!proposingTeam) {
+        console.warn(`Could not find team with id ${p.proposingTeamId} for trade ${p.id}`);
+        return null;
+      }
+      return {
+        id: p.id,
+        proposingTeam: proposingTeam,
+        playersOffered: this.populatePlayers(p.playersOffered),
+        playersRequested: this.populatePlayers(p.playersRequested),
+      };
+    }).filter((t): t is TradeProposalDetails => t !== null);
+  });
 
   private populatePlayers(playerIds: number[]): Player[] {
     return playerIds
@@ -97,8 +91,6 @@ export class MyTeamComponent {
     
     await this.supabase.updateRoster(newStarterIds, newBenchIds);
 
-    // Update local state after saving
-    this.myRoster.set(this.supabase.getMyRoster());
     this.isEditing.set(false);
     this.uiService.showNotification('Roster saved!', 'success');
   }
@@ -125,8 +117,7 @@ export class MyTeamComponent {
     const result = await this.supabase.acceptTrade(tradeId);
     if (result.success) {
       this.uiService.showNotification('Trade accepted!', 'success');
-      this.loadTeamData();
-      this.loadTradeProposals();
+      // No manual data refresh needed. Realtime updates will trigger UI changes.
     } else {
       this.uiService.showNotification('Failed to accept trade.', 'error');
     }
@@ -135,6 +126,6 @@ export class MyTeamComponent {
   async rejectTrade(tradeId: number) {
     await this.supabase.rejectTrade(tradeId);
     this.uiService.showNotification('Trade rejected.', 'success');
-    this.loadTradeProposals();
+    // No manual data refresh needed. Realtime updates will trigger UI changes.
   }
 }

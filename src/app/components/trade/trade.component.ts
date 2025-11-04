@@ -24,8 +24,8 @@ export class TradeComponent {
   showMyPlayersModal = signal(false);
   showOpponentPlayersModal = signal(false);
 
-  myTeam = signal<Team | null>(this.supabase.getMyTeam());
-  myRoster = signal<Roster | null>(this.supabase.getMyRoster());
+  myTeam = computed(() => this.supabase.getMyTeam());
+  myRoster = computed(() => this.supabase.getMyRoster());
 
   opponentTeamId$ = this.route.params.pipe(map(params => parseInt(params['teamId'], 10)));
   opponentTeam = toSignal(this.opponentTeamId$.pipe(

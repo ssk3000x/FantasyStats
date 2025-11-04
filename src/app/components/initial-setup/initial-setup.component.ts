@@ -14,7 +14,7 @@ import { Player, Roster, Team } from '../../services/types';
   templateUrl: './initial-setup.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class InitialSetupComponent {
+export class TeamDetailComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   supabase = inject(SupabaseService);

@@ -31,7 +31,7 @@ export class LoginComponent {
 
   async login() {
     if (!this.teamName() || !this.password()) {
-      this.error.set('Please enter both team name and password.');
+      this.error.set('Please enter a team name and password.');
       return;
     }
 

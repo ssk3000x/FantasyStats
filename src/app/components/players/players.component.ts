@@ -18,13 +18,9 @@ interface PlayerWithOwner extends Player {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlayersComponent {
-  // FIX: Add explicit types to injected services
   private supabase: SupabaseService = inject(SupabaseService);
   private uiService: UiService = inject(UiService);
 
-  isLoading = signal(true);
-  players = signal<PlayerWithOwner[]>([]);
-  myRoster = signal<Roster | null>(null);
   filterPosition = signal<PlayerFilter>('FREE');
 
   isModalOpen = signal(false);
@@ -34,6 +30,20 @@ export class PlayersComponent {
   transactionSuccess = signal(false);
 
   positions: PlayerFilter[] = ['FREE', 'ALL'];
+  
+  private players = computed<PlayerWithOwner[]>(() => {
+    const players = this.supabase.getPlayers();
+    const rosters = this.supabase.getRosters();
+    const teams = this.supabase.getTeams();
+
+    return players.map(player => {
+        const ownerRoster = rosters.find(r => r.starters.includes(player.id) || r.bench.includes(player.id));
+        const ownerTeam = ownerRoster ? teams.find(t => t.id === ownerRoster.teamId) : null;
+        return { ...player, ownerTeamName: ownerTeam?.name ?? null };
+    });
+  });
+
+  private myRoster = computed(() => this.supabase.getMyRoster());
 
   filteredPlayers = computed(() => {
     const pos = this.filterPosition();
@@ -56,28 +66,6 @@ export class PlayersComponent {
   });
 
   getTeamColorClass = this.supabase.getTeamColorClass;
-
-  constructor() {
-    this.loadData();
-  }
-
-  loadData() {
-    this.isLoading.set(true);
-    // FIX: The service methods getPlayers, getRosters, and getTeams return arrays directly, not Observables.
-    // Removed nested .subscribe() calls and replaced with direct assignment.
-    const players = this.supabase.getPlayers();
-    const rosters = this.supabase.getRosters();
-    const teams = this.supabase.getTeams();
-
-    const populatedPlayers = players.map(player => {
-        const ownerRoster = rosters.find(r => r.starters.includes(player.id) || r.bench.includes(player.id));
-        const ownerTeam = ownerRoster ? teams.find(t => t.id === ownerRoster.teamId) : null;
-        return { ...player, ownerTeamName: ownerTeam?.name ?? null };
-    });
-    this.players.set(populatedPlayers);
-    this.myRoster.set(this.supabase.getMyRoster());
-    this.isLoading.set(false);
-  }
   
   showPlayerDetails(player: Player) {
     this.uiService.showPlayerDetails(player);
@@ -103,7 +91,6 @@ export class PlayersComponent {
 
     await this.supabase.addDropPlayer(playerToAdd.id, playerToDrop);
     this.closeModal();
-    this.loadData(); // Refresh data
     
     this.transactionSuccess.set(true);
     setTimeout(() => this.transactionSuccess.set(false), 3000);

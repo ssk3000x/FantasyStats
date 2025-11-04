@@ -14,13 +14,12 @@ type ActiveTab = 'standings' | 'settings';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LeagueComponent {
-  // FIX: Add explicit types to injected services
   private supabase: SupabaseService = inject(SupabaseService);
   private router: Router = inject(Router);
 
   activeTab = signal<ActiveTab>('standings');
-  teams = signal<Team[]>([]);
-  myTeamId = signal<number | null>(null);
+  teams = computed(() => this.supabase.getTeams());
+  myTeamId = computed(() => this.supabase.getLoggedInTeamId());
 
   sortedTeams = computed(() => {
     return [...this.teams()].sort((a, b) => {
@@ -33,14 +32,8 @@ export class LeagueComponent {
 
   getTeamColorClass = this.supabase.getTeamColorClass;
 
-  constructor() {
-    const teams = this.supabase.getTeams();
-    this.teams.set(teams);
-    this.myTeamId.set(this.supabase.getLoggedInTeamId());
-  }
-
-  logout() {
-    this.supabase.logout();
+  async logout() {
+    await this.supabase.logout();
     this.router.navigate(['/login']);
   }
 

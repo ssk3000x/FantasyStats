@@ -1,9 +1,9 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
-import { MOCK_DATA } from './mock-data';
 import { Player, Roster, ScheduledMatchup, Team, TradeProposal } from './types';
+import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import { supabaseUrl, supabaseKey } from './supabase.config';
 
 const USER_SESSION_KEY = 'fantasy_user_team_id';
-const FANTASY_DATA_KEY = 'fantasy_app_data'; // New constant for localStorage key
 
 // Define the date ranges for each week
 const nextYear = new Date().getFullYear() + 1;
@@ -17,14 +17,20 @@ const FANTASY_WEEKS = [
   providedIn: 'root',
 })
 export class SupabaseService {
-  private players = signal<Player[]>(MOCK_DATA.players);
-  private teams = signal<Team[]>(MOCK_DATA.teams);
-  private rosters = signal<Roster[]>(MOCK_DATA.rosters);
-  private schedule = signal<ScheduledMatchup[]>(MOCK_DATA.schedule);
-  private tradeProposals = signal<TradeProposal[]>(MOCK_DATA.tradeProposals);
+  private supabase: SupabaseClient;
 
+  // Signals as a client-side cache for DB data
+  private players = signal<Player[]>([]);
+  private teams = signal<Team[]>([]);
+  private rosters = signal<Roster[]>([]);
+  private schedule = signal<ScheduledMatchup[]>([]);
+  private tradeProposals = signal<TradeProposal[]>([]);
+  private currentUser = signal<User | null>(null);
   private loggedInTeamId = signal<number | null>(null);
   
+  public dataLoaded = signal(false);
+  public isConfigured = signal(true);
+
   hasPendingTrades = computed(() => {
     const myId = this.loggedInTeamId();
     if (!myId) return false;
@@ -32,78 +38,127 @@ export class SupabaseService {
   });
 
   constructor() {
-    this.loadStateFromLocalStorage();
-
-    // This effect will automatically save the entire app state to localStorage whenever a change is made.
-    effect(() => {
-      const state = {
-        players: this.players(),
-        teams: this.teams(),
-        rosters: this.rosters(),
-        schedule: this.schedule(),
-        tradeProposals: this.tradeProposals(),
-      };
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(FANTASY_DATA_KEY, JSON.stringify(state));
-      }
-    });
-
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      const storedId = window.sessionStorage.getItem(USER_SESSION_KEY);
-      if (storedId) {
-        this.loggedInTeamId.set(parseInt(storedId, 10));
-      }
+    // FIX: Cast to string to avoid literal type comparison error when credentials are set.
+    if (!supabaseUrl || (supabaseUrl as string) === 'YOUR_SUPABASE_URL' || !supabaseKey || (supabaseKey as string) === 'YOUR_SUPABASE_ANON_KEY') {
+      console.error("Supabase URL or Key is not configured. Please update src/app/services/supabase.config.ts");
+      this.isConfigured.set(false);
+      this.supabase = {} as SupabaseClient; // Prevent app from crashing
+      // Set data loaded to true to unblock the app component from its loading state
+      // so it can show our configuration error component.
+      this.dataLoaded.set(true);
+      return;
     }
+    this.supabase = createClient(supabaseUrl, supabaseKey);
+    this.initialize();
+  }
+  
+  private async initialize() {
+    // Fetch initial data and user session in parallel to speed up load time.
+    const [{ data: sessionData }] = await Promise.all([
+      this.supabase.auth.getSession(),
+      this.loadInitialData(),
+    ]);
+
+    // Set initial auth state from the session before the app renders.
+    this.currentUser.set(sessionData.session?.user ?? null);
+    if (sessionData.session?.user) {
+      const teamId = window.sessionStorage.getItem(USER_SESSION_KEY);
+      this.loggedInTeamId.set(teamId ? parseInt(teamId, 10) : null);
+    }
+    
+    // Now that the initial state is set, set up listeners for future changes.
+    this.listenForAuthStateChanges();
+    this.subscribeToRealtimeChanges();
+
+    // Signal that all necessary data is loaded and the app is ready to display.
+    this.dataLoaded.set(true);
   }
 
-  private loadStateFromLocalStorage(): void {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const savedStateJSON = window.localStorage.getItem(FANTASY_DATA_KEY);
-      if (savedStateJSON) {
-        try {
-          const savedState = JSON.parse(savedStateJSON);
-          // Basic validation to ensure the loaded data is not empty or malformed
-          if (savedState && savedState.players && savedState.rosters) {
-            this.players.set(savedState.players);
-            this.teams.set(savedState.teams);
-            this.rosters.set(savedState.rosters);
-            this.schedule.set(savedState.schedule);
-            this.tradeProposals.set(savedState.tradeProposals);
-            return;
-          }
-        } catch (e) {
-          console.error('Failed to parse state from localStorage, using mock data.', e);
-          // If parsing fails, the service will continue with the default mock data,
-          // and the effect will overwrite the corrupted localStorage entry.
-        }
+  private async loadInitialData() {
+    // Fetch all data in parallel for faster loading, mapping snake_case cols to camelCase props
+    const [players, teams, rosters, schedule, tradeProposals] = await Promise.all([
+      this.supabase.from('players').select('id, name, projectedPoints:projected_points, weeklyScores:weekly_scores'),
+      this.supabase.from('teams').select('id, name, wins, losses, ties, pointsFor:points_for'),
+      this.supabase.from('rosters').select('teamId:team_id, starters, bench'),
+      this.supabase.from('schedule').select('id, week, team1Id:team1_id, team2Id:team2_id'),
+      this.supabase.from('trade_proposals').select('id, proposingTeamId:proposing_team_id, receivingTeamId:receiving_team_id, playersOffered:players_offered, playersRequested:players_requested, status')
+    ]);
+
+    this.players.set(players.data ?? []);
+    this.teams.set(teams.data ?? []);
+    this.rosters.set((rosters.data as any) ?? []);
+    this.schedule.set((schedule.data as any) ?? []);
+    this.tradeProposals.set((tradeProposals.data as any) ?? []);
+  }
+
+  private listenForAuthStateChanges() {
+     this.supabase.auth.onAuthStateChange(async (event, session) => {
+      this.currentUser.set(session?.user ?? null);
+      if (session?.user) {
+        // This is a simple mock: we store the teamId in session storage on login
+        // and retrieve it here. A real app might fetch this from a 'profiles' table.
+        const teamId = window.sessionStorage.getItem(USER_SESSION_KEY);
+        this.loggedInTeamId.set(teamId ? parseInt(teamId, 10) : null);
+      } else {
+        this.loggedInTeamId.set(null);
+        window.sessionStorage.removeItem(USER_SESSION_KEY);
       }
-    }
-    // If no data is found in localStorage, the signals will retain their initial
-    // values from MOCK_DATA, and the effect will save this initial state.
+    });
+  }
+  
+  private subscribeToRealtimeChanges() {
+    // Realtime subscription for rosters
+    this.supabase.channel('rosters')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rosters' }, async () => {
+        const { data } = await this.supabase.from('rosters').select('teamId:team_id, starters, bench');
+        this.rosters.set((data as any) ?? []);
+      })
+      .subscribe();
+
+    // Realtime subscription for trade proposals
+    this.supabase.channel('trade_proposals')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trade_proposals' }, async () => {
+        const { data } = await this.supabase.from('trade_proposals').select('id, proposingTeamId:proposing_team_id, receivingTeamId:receiving_team_id, playersOffered:players_offered, playersRequested:players_requested, status');
+        this.tradeProposals.set((data as any) ?? []);
+      })
+      .subscribe();
   }
 
   // --- Auth ---
-  async login(teamName: string, password: string): Promise<{ user: { id: number } | null; error: string | null }> {
+  // A simplified auth system using team name as a pseudo-email.
+  async login(teamName: string, password: string): Promise<{ user: User | null; error: string | null }> {
     const team = this.teams().find(t => t.name.toLowerCase() === teamName.toLowerCase());
-    if (team && password === '1234') {
-      this.loggedInTeamId.set(team.id);
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        window.sessionStorage.setItem(USER_SESSION_KEY, team.id.toString());
-      }
-      return { user: { id: team.id }, error: null };
+    if (!team) {
+      return { user: null, error: 'Invalid team name.' };
     }
-    return { user: null, error: 'Invalid team name or password.' };
+    
+    const email = `${team.name.toLowerCase().replace(/\s+/g, '')}@fantasystats.app`;
+
+    // ONLY attempt to sign in. Do NOT create an account.
+    const { data, error } = await this.supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      return { user: null, error: "Invalid team name or password." };
+    }
+    
+    if (data.user) {
+      window.sessionStorage.setItem(USER_SESSION_KEY, team.id.toString());
+      // FIX: Explicitly set the loggedInTeamId signal here to prevent a race condition
+      // with the onAuthStateChange listener.
+      this.loggedInTeamId.set(team.id);
+    }
+    
+    return { user: data.user, error: null };
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
+    await this.supabase.auth.signOut();
+    window.sessionStorage.removeItem(USER_SESSION_KEY);
     this.loggedInTeamId.set(null);
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      window.sessionStorage.removeItem(USER_SESSION_KEY);
-    }
   }
 
   isAuthenticated(): boolean {
-    return this.loggedInTeamId() !== null;
+    return this.currentUser() !== null;
   }
   
   getLoggedInTeamId(): number | null {
@@ -114,21 +169,21 @@ export class SupabaseService {
   getCurrentFantasyWeek(): number {
     const now = new Date();
     const currentWeek = FANTASY_WEEKS.find(w => now >= w.start && now <= w.end);
-    return currentWeek ? currentWeek.week : 1; // Default to week 1 if not in a defined week
+    return currentWeek ? currentWeek.week : 1;
   }
   
   getWeekStatus(week: number): 'past' | 'current' | 'future' {
       const now = new Date();
       const weekInfo = FANTASY_WEEKS.find(w => w.week === week);
-      if (!weekInfo) return 'future'; // Assume future if not defined
+      if (!weekInfo) return 'future';
       if (now > weekInfo.end) return 'past';
       if (now >= weekInfo.start && now <= weekInfo.end) return 'current';
       return 'future';
   }
 
-  // --- Data Getters ---
+  // --- Data Getters (now read from local signal cache) ---
   getPlayers(): Player[] {
-    return [...this.players()];
+    return this.players();
   }
 
   getPlayerById(id: number): Player | undefined {
@@ -137,16 +192,13 @@ export class SupabaseService {
 
   getPlayerActualScore(playerId: number, week: number): number {
       const weekStatus = this.getWeekStatus(week);
-      if (weekStatus === 'future') {
-        return 0;
-      }
+      if (weekStatus === 'future') return 0;
       const player = this.getPlayerById(playerId);
-      // Week is 1-based, array is 0-based
       return player?.weeklyScores?.[week - 1] ?? 0;
   }
 
   getTeams(): Team[] {
-    return [...this.teams()];
+    return this.teams();
   }
 
   getTeamById(id: number): Team | undefined {
@@ -154,7 +206,7 @@ export class SupabaseService {
   }
 
   getRosters(): Roster[] {
-    return [...this.rosters()];
+    return this.rosters();
   }
 
   getRosterForTeam(teamId: number): Roster | undefined {
@@ -162,7 +214,7 @@ export class SupabaseService {
   }
   
   getSchedule(): ScheduledMatchup[] {
-    return [...this.schedule()];
+    return this.schedule();
   }
   
   getMatchupsForWeek(week: number): ScheduledMatchup[] {
@@ -181,40 +233,30 @@ export class SupabaseService {
     return this.rosters().find(r => r.teamId === id) ?? null;
   }
 
-  // --- Data Mutations ---
+  // --- Data Mutations (now write to Supabase DB) ---
   async updateRoster(starterIds: number[], benchIds: number[]): Promise<void> {
     const teamId = this.getLoggedInTeamId();
     if (!teamId) return;
 
-    this.rosters.update(rosters => {
-      const rosterIndex = rosters.findIndex(r => r.teamId === teamId);
-      if (rosterIndex !== -1) {
-        rosters[rosterIndex] = { ...rosters[rosterIndex], starters: starterIds, bench: benchIds };
-      }
-      return [...rosters];
-    });
+    await this.supabase
+      .from('rosters')
+      .update({ starters: starterIds, bench: benchIds })
+      .eq('team_id', teamId);
   }
 
   async addDropPlayer(playerToAddId: number, playerToDropId: number): Promise<void> {
     const teamId = this.getLoggedInTeamId();
-    if (!teamId) return;
+    const roster = this.getMyRoster();
+    if (!teamId || !roster) return;
+    
+    const newStarters = roster.starters.filter(id => id !== playerToDropId);
+    const newBench = roster.bench.filter(id => id !== playerToDropId);
+    newBench.push(playerToAddId);
 
-    this.rosters.update(rosters => {
-      const rosterIndex = rosters.findIndex(r => r.teamId === teamId);
-      if (rosterIndex !== -1) {
-        const currentRoster = rosters[rosterIndex];
-        
-        // Remove the dropped player from wherever they are (starters or bench)
-        const newStarters = currentRoster.starters.filter(id => id !== playerToDropId);
-        const newBench = currentRoster.bench.filter(id => id !== playerToDropId);
-        
-        // Add the new player to the bench
-        newBench.push(playerToAddId);
-        
-        rosters[rosterIndex] = { ...currentRoster, starters: newStarters, bench: newBench };
-      }
-      return [...rosters];
-    });
+    await this.supabase
+      .from('rosters')
+      .update({ starters: newStarters, bench: newBench })
+      .eq('team_id', teamId);
   }
 
   // --- Trades ---
@@ -226,74 +268,30 @@ export class SupabaseService {
     const proposingTeamId = this.getLoggedInTeamId();
     if (!proposingTeamId) return;
 
-    const newProposal: TradeProposal = {
-      id: Date.now(), // simple unique id
-      proposingTeamId,
-      receivingTeamId,
-      playersOffered,
-      playersRequested,
+    const newProposal = {
+      proposing_team_id: proposingTeamId,
+      receiving_team_id: receivingTeamId,
+      players_offered: playersOffered,
+      players_requested: playersRequested,
       status: 'pending'
     };
-    this.tradeProposals.update(proposals => [...proposals, newProposal]);
+    
+    await this.supabase.from('trade_proposals').insert(newProposal);
   }
   
   async rejectTrade(tradeId: number): Promise<void> {
-      this.tradeProposals.update(proposals => {
-          const tradeIndex = proposals.findIndex(t => t.id === tradeId);
-          if (tradeIndex > -1) {
-              proposals[tradeIndex].status = 'rejected';
-          }
-          return [...proposals];
-      });
+      await this.supabase
+        .from('trade_proposals')
+        .update({ status: 'rejected' })
+        .eq('id', tradeId);
   }
 
-  async acceptTrade(tradeId: number): Promise<{ success: boolean }> {
-    const trade = this.tradeProposals().find(t => t.id === tradeId);
-    if (!trade || trade.status !== 'pending') return { success: false };
-
-    const { proposingTeamId, receivingTeamId, playersOffered, playersRequested } = trade;
-
-    this.rosters.update(currentRosters => {
-      const proposerRosterIndex = currentRosters.findIndex(r => r.teamId === proposingTeamId);
-      const receiverRosterIndex = currentRosters.findIndex(r => r.teamId === receivingTeamId);
-
-      if (proposerRosterIndex === -1 || receiverRosterIndex === -1) {
-        return currentRosters;
-      }
-
-      const proposerRoster = currentRosters[proposerRosterIndex];
-      const receiverRoster = currentRosters[receiverRosterIndex];
-
-      // Remove players from original owners
-      // Proposer gives away playersOffered
-      const proposerNewStarters = proposerRoster.starters.filter(id => !playersOffered.includes(id));
-      const proposerNewBench = proposerRoster.bench.filter(id => !playersOffered.includes(id));
-
-      // Receiver gives away playersRequested
-      const receiverNewStarters = receiverRoster.starters.filter(id => !playersRequested.includes(id));
-      const receiverNewBench = receiverRoster.bench.filter(id => !playersRequested.includes(id));
-
-      // Add players to new owners' benches
-      // Proposer receives playersRequested
-      proposerNewBench.push(...playersRequested);
-      // Receiver receives playersOffered
-      receiverNewBench.push(...playersOffered);
-
-      // Update rosters in the array
-      currentRosters[proposerRosterIndex] = { ...proposerRoster, starters: proposerNewStarters, bench: proposerNewBench };
-      currentRosters[receiverRosterIndex] = { ...receiverRoster, starters: receiverNewStarters, bench: receiverNewBench };
-
-      return [...currentRosters];
-    });
-
-    this.tradeProposals.update(proposals => {
-      const tradeIndex = proposals.findIndex(t => t.id === tradeId);
-      if (tradeIndex !== -1) {
-        proposals[tradeIndex].status = 'accepted';
-      }
-      return [...proposals];
-    });
-
+  async acceptTrade(tradeId: number): Promise<{ success: boolean; error?: string }> {
+    const { error } = await this.supabase.rpc('accept_trade', { trade_id_param: tradeId });
+    if (error) {
+      console.error('Error accepting trade:', error);
+      return { success: false, error: error.message };
+    }
     return { success: true };
   }
   
