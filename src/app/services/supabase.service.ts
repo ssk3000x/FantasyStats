@@ -1,8 +1,9 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, effect } from '@angular/core';
 import { MOCK_DATA } from './mock-data';
 import { Player, Roster, ScheduledMatchup, Team, TradeProposal } from './types';
 
 const USER_SESSION_KEY = 'fantasy_user_team_id';
+const FANTASY_DATA_KEY = 'fantasy_app_data'; // New constant for localStorage key
 
 // Define the date ranges for each week
 const nextYear = new Date().getFullYear() + 1;
@@ -31,12 +32,54 @@ export class SupabaseService {
   });
 
   constructor() {
+    this.loadStateFromLocalStorage();
+
+    // This effect will automatically save the entire app state to localStorage whenever a change is made.
+    effect(() => {
+      const state = {
+        players: this.players(),
+        teams: this.teams(),
+        rosters: this.rosters(),
+        schedule: this.schedule(),
+        tradeProposals: this.tradeProposals(),
+      };
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(FANTASY_DATA_KEY, JSON.stringify(state));
+      }
+    });
+
     if (typeof window !== 'undefined' && window.sessionStorage) {
       const storedId = window.sessionStorage.getItem(USER_SESSION_KEY);
       if (storedId) {
         this.loggedInTeamId.set(parseInt(storedId, 10));
       }
     }
+  }
+
+  private loadStateFromLocalStorage(): void {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const savedStateJSON = window.localStorage.getItem(FANTASY_DATA_KEY);
+      if (savedStateJSON) {
+        try {
+          const savedState = JSON.parse(savedStateJSON);
+          // Basic validation to ensure the loaded data is not empty or malformed
+          if (savedState && savedState.players && savedState.rosters) {
+            this.players.set(savedState.players);
+            this.teams.set(savedState.teams);
+            this.rosters.set(savedState.rosters);
+            this.schedule.set(savedState.schedule);
+            this.tradeProposals.set(savedState.tradeProposals);
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to parse state from localStorage, using mock data.', e);
+          // If parsing fails, the service will continue with the default mock data,
+          // and the effect will overwrite the corrupted localStorage entry.
+        }
+      }
+    }
+    // If no data is found in localStorage, the signals will retain their initial
+    // values from MOCK_DATA, and the effect will save this initial state.
   }
 
   // --- Auth ---
@@ -160,9 +203,15 @@ export class SupabaseService {
       const rosterIndex = rosters.findIndex(r => r.teamId === teamId);
       if (rosterIndex !== -1) {
         const currentRoster = rosters[rosterIndex];
+        
+        // Remove the dropped player from wherever they are (starters or bench)
+        const newStarters = currentRoster.starters.filter(id => id !== playerToDropId);
         const newBench = currentRoster.bench.filter(id => id !== playerToDropId);
+        
+        // Add the new player to the bench
         newBench.push(playerToAddId);
-        rosters[rosterIndex] = { ...currentRoster, bench: newBench };
+        
+        rosters[rosterIndex] = { ...currentRoster, starters: newStarters, bench: newBench };
       }
       return [...rosters];
     });

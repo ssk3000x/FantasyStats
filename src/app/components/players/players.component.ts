@@ -46,10 +46,13 @@ export class PlayersComponent {
     return allPlayers;
   });
   
-  myBench = computed(() => {
+  myPlayersOnRoster = computed(() => {
     const roster = this.myRoster();
     if (!roster) return [];
-    return roster.bench.map(id => this.supabase.getPlayerById(id)).filter((p): p is Player => !!p);
+    const allPlayerIds = [...roster.starters, ...roster.bench];
+    return allPlayerIds
+      .map(id => this.supabase.getPlayerById(id))
+      .filter((p): p is Player => !!p);
   });
 
   getTeamColorClass = this.supabase.getTeamColorClass;
