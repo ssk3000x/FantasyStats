@@ -45,13 +45,13 @@ for (let i = allPlayerIds.length - 1; i > 0; i--) {
 
 const rosters: Roster[] = [
   // Swarchis
-  { teamId: 1, starters: allPlayerIds.slice(0, 3), bench: allPlayerIds.slice(3, 5) },
+  { teamId: 1, starters: allPlayerIds.slice(0, 4), bench: allPlayerIds.slice(4, 5) },
   // Gabriel
-  { teamId: 2, starters: allPlayerIds.slice(5, 8), bench: allPlayerIds.slice(8, 10) },
+  { teamId: 2, starters: allPlayerIds.slice(5, 9), bench: allPlayerIds.slice(9, 10) },
   // Rihito
-  { teamId: 3, starters: allPlayerIds.slice(10, 13), bench: allPlayerIds.slice(13, 15) },
+  { teamId: 3, starters: allPlayerIds.slice(10, 14), bench: allPlayerIds.slice(14, 15) },
   // Daniel
-  { teamId: 4, starters: allPlayerIds.slice(15, 18), bench: allPlayerIds.slice(18, 20) },
+  { teamId: 4, starters: allPlayerIds.slice(15, 19), bench: allPlayerIds.slice(19, 20) },
 ];
 
 

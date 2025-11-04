@@ -100,8 +100,8 @@ export class MyTeamComponent {
     }
   }
   
-  isRosterValid = computed(() => this.tempStarters().length === 3);
-  canMoveToStarters = computed(() => this.tempStarters().length < 3);
+  isRosterValid = computed(() => this.tempStarters().length === 4);
+  canMoveToStarters = computed(() => this.tempStarters().length < 4);
 
   moveToStarters(player: Player) {
     if (!this.canMoveToStarters()) return;
