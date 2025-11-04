@@ -74,8 +74,8 @@ export class MyTeamComponent {
     this.isEditing.set(false);
   }
   
+  isRosterValid = computed(() => this.tempStarters().length === 3);
   canMoveToStarters = computed(() => this.tempStarters().length < 3);
-  canMoveToBench = computed(() => this.tempBench().length < 1);
 
   moveToStarters(player: Player) {
     if (!this.canMoveToStarters()) return;
@@ -84,7 +84,6 @@ export class MyTeamComponent {
   }
 
   moveToBench(player: Player) {
-    if (!this.canMoveToBench()) return;
     this.tempStarters.update(s => s.filter(p => p.id !== player.id));
     this.tempBench.update(b => [...b, player]);
   }

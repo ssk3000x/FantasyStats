@@ -1,11 +1,7 @@
 // Defining the data models for the application.
-export type Position = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DEF';
-
 export interface Player {
   id: number;
   name: string;
-  position: Position;
-  team: string; // NFL team abbreviation
   imageUrl: string;
   projectedPoints: number;
   weeklyScores?: number[];

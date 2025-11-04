@@ -1,143 +1,175 @@
 import { Injectable, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { MOCK_DATA } from './mock-data';
-import { Player, Team, Roster, ScheduledMatchup } from './types';
+import { Player, Roster, ScheduledMatchup, Team } from './types';
 
-const SESSION_KEY = 'fantasy-user-team-id';
+const USER_SESSION_KEY = 'fantasy_user_team_id';
+
+// Define the date ranges for each week
+const nextYear = new Date().getFullYear() + 1;
+const FANTASY_WEEKS = [
+  { week: 1, start: new Date(`${nextYear}-09-04T00:00:00Z`), end: new Date(`${nextYear}-09-10T23:59:59Z`) },
+  { week: 2, start: new Date(`${nextYear}-09-11T00:00:00Z`), end: new Date(`${nextYear}-09-17T23:59:59Z`) },
+  // Add more weeks here as the season progresses
+];
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SupabaseService {
-  private players = signal(MOCK_DATA.players);
-  private teams = signal(MOCK_DATA.teams);
-  private rosters = signal(MOCK_DATA.rosters);
-  private schedule = signal(MOCK_DATA.schedule);
-  
-  private currentFantasyWeek = signal(1); // Default to week 1
+  private players = signal<Player[]>(MOCK_DATA.players);
+  private teams = signal<Team[]>(MOCK_DATA.teams);
+  private rosters = signal<Roster[]>(MOCK_DATA.rosters);
+  private schedule = signal<ScheduledMatchup[]>(MOCK_DATA.schedule);
 
-  constructor(private router: Router) {}
+  private loggedInTeamId = signal<number | null>(null);
+
+  constructor() {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const storedId = window.sessionStorage.getItem(USER_SESSION_KEY);
+      if (storedId) {
+        this.loggedInTeamId.set(parseInt(storedId, 10));
+      }
+    }
+  }
 
   // --- Auth ---
-  login(teamName: string, password_unused: string): Promise<{ user: { id: number } | null, error: string | null }> {
+  async login(teamName: string, password: string): Promise<{ user: { id: number } | null; error: string | null }> {
     const team = this.teams().find(t => t.name.toLowerCase() === teamName.toLowerCase());
-    // In a real app, you'd hash and compare the password. Here, it's a simple check.
-    if (team && password_unused === '1234') {
-      localStorage.setItem(SESSION_KEY, team.id.toString());
-      return Promise.resolve({ user: { id: team.id }, error: null });
+    if (team && password === '1234') {
+      this.loggedInTeamId.set(team.id);
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.setItem(USER_SESSION_KEY, team.id.toString());
+      }
+      return { user: { id: team.id }, error: null };
     }
-    return Promise.resolve({ user: null, error: 'Invalid team name or password.' });
+    return { user: null, error: 'Invalid team name or password.' };
   }
 
   logout(): void {
-    localStorage.removeItem(SESSION_KEY);
-    this.router.navigate(['/login']);
+    this.loggedInTeamId.set(null);
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.removeItem(USER_SESSION_KEY);
+    }
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem(SESSION_KEY);
+    return this.loggedInTeamId() !== null;
   }
   
-  // --- Current User ---
-  getMyTeamId(): number | null {
-    const id = localStorage.getItem(SESSION_KEY);
-    return id ? parseInt(id, 10) : null;
+  private getLoggedInTeamId(): number | null {
+      return this.loggedInTeamId();
   }
 
-  getMyTeam(): Team | null {
-    const myTeamId = this.getMyTeamId();
-    if (!myTeamId) return null;
-    return this.teams().find(t => t.id === myTeamId) ?? null;
+  // --- Date/Week Management ---
+  getCurrentFantasyWeek(): number {
+    const now = new Date();
+    const currentWeek = FANTASY_WEEKS.find(w => now >= w.start && now <= w.end);
+    return currentWeek ? currentWeek.week : 1; // Default to week 1 if not in a defined week
+  }
+  
+  getWeekStatus(week: number): 'past' | 'current' | 'future' {
+      const now = new Date();
+      const weekInfo = FANTASY_WEEKS.find(w => w.week === week);
+      if (!weekInfo) return 'future'; // Assume future if not defined
+      if (now > weekInfo.end) return 'past';
+      if (now >= weekInfo.start && now <= weekInfo.end) return 'current';
+      return 'future';
   }
 
-  getMyRoster(): Roster | null {
-    const myTeamId = this.getMyTeamId();
-    if (!myTeamId) return null;
-    return this.rosters().find(r => r.teamId === myTeamId) ?? null;
-  }
-
-  // --- Data Access ---
+  // --- Data Getters ---
   getPlayers(): Player[] {
-    return this.players();
+    return [...this.players()];
   }
 
   getPlayerById(id: number): Player | undefined {
     return this.players().find(p => p.id === id);
   }
 
+  getPlayerActualScore(playerId: number, week: number): number {
+      const weekStatus = this.getWeekStatus(week);
+      if (weekStatus === 'future') {
+        return 0;
+      }
+      const player = this.getPlayerById(playerId);
+      // Week is 1-based, array is 0-based
+      return player?.weeklyScores?.[week - 1] ?? 0;
+  }
+
   getTeams(): Team[] {
-    return this.teams();
+    return [...this.teams()];
   }
 
   getTeamById(id: number): Team | undefined {
     return this.teams().find(t => t.id === id);
   }
-  
+
   getRosters(): Roster[] {
-    return this.rosters();
-  }
-
-  getRosterByTeamId(teamId: number): Roster | undefined {
-    return this.rosters().find(r => r.teamId === teamId);
-  }
-
-  getMatchupForTeam(teamId: number, week: number): ScheduledMatchup | undefined {
-    return this.schedule().find(m => m.week === week && (m.team1Id === teamId || m.team2Id === teamId));
+    return [...this.rosters()];
   }
   
-  // --- Roster Management ---
+  getSchedule(): ScheduledMatchup[] {
+    return [...this.schedule()];
+  }
+  
+  getMatchupsForWeek(week: number): ScheduledMatchup[] {
+      return this.schedule().filter(m => m.week === week);
+  }
+
+  getMyTeam(): Team | null {
+    const id = this.getLoggedInTeamId();
+    if (!id) return null;
+    return this.getTeamById(id) ?? null;
+  }
+
+  getMyRoster(): Roster | null {
+    const id = this.getLoggedInTeamId();
+    if (!id) return null;
+    return this.rosters().find(r => r.teamId === id) ?? null;
+  }
+
+  // --- Data Mutations ---
+  async updateRoster(starterIds: number[], benchIds: number[]): Promise<void> {
+    const teamId = this.getLoggedInTeamId();
+    if (!teamId) return;
+
+    this.rosters.update(rosters => {
+      const rosterIndex = rosters.findIndex(r => r.teamId === teamId);
+      if (rosterIndex !== -1) {
+        rosters[rosterIndex] = { ...rosters[rosterIndex], starters: starterIds, bench: benchIds };
+      }
+      return [...rosters];
+    });
+  }
+
   async addDropPlayer(playerToAddId: number, playerToDropId: number): Promise<void> {
-    const myTeamId = this.getMyTeamId();
-    if (!myTeamId) {
-      return Promise.reject('User not found');
-    }
-    
-    // Check if player is already owned
-    const isOwned = this.rosters().some(r => r.starters.includes(playerToAddId) || r.bench.includes(playerToAddId));
-    if (isOwned) {
-      return Promise.reject('Player is already on a roster.');
-    }
+    const teamId = this.getLoggedInTeamId();
+    if (!teamId) return;
 
     this.rosters.update(rosters => {
-      const myRoster = rosters.find(r => r.teamId === myTeamId);
-      if (myRoster) {
-        const dropIndex = myRoster.bench.indexOf(playerToDropId);
-        if (dropIndex > -1) {
-          myRoster.bench.splice(dropIndex, 1);
-          myRoster.bench.push(playerToAddId);
-        }
+      const rosterIndex = rosters.findIndex(r => r.teamId === teamId);
+      if (rosterIndex !== -1) {
+        const currentRoster = rosters[rosterIndex];
+        const newBench = currentRoster.bench.filter(id => id !== playerToDropId);
+        newBench.push(playerToAddId);
+        rosters[rosterIndex] = { ...currentRoster, bench: newBench };
       }
-      return rosters;
+      return [...rosters];
     });
-    return Promise.resolve();
   }
   
-  async updateRoster(newStarters: number[], newBench: number[]): Promise<void> {
-    const myTeamId = this.getMyTeamId();
-    if (!myTeamId) {
-      return Promise.reject('User not found');
-    }
-
-    this.rosters.update(rosters => {
-      const myRoster = rosters.find(r => r.teamId === myTeamId);
-      if (myRoster) {
-        myRoster.starters = newStarters;
-        myRoster.bench = newBench;
-      }
-      return rosters;
-    });
-    return Promise.resolve();
-  }
-
   // --- UI Helpers ---
-  getTeamColorClass(teamName: string | null): string {
-    if (!teamName) return 'text-gray-400';
+  getTeamColorClass(teamName: string): string {
     switch (teamName.toLowerCase()) {
-      case 'swarchis': return 'text-team-pink';
-      case 'gabriel': return 'text-team-green';
-      case 'rihito': return 'text-team-purple';
-      case 'daniel': return 'text-team-blue';
-      default: return 'text-white';
+      case 'swarchis':
+        return 'text-team-pink';
+      case 'gabriel':
+        return 'text-team-green';
+      case 'rihito':
+        return 'text-team-purple';
+      case 'daniel':
+        return 'text-team-blue';
+      default:
+        return 'text-gray-400';
     }
   }
 }

@@ -2,17 +2,20 @@ import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } 
 import { CommonModule } from '@angular/common';
 import { SupabaseService } from '../../services/supabase.service';
 import { UiService } from '../../services/ui.service';
-import { Player, Team, Roster } from '../../services/types';
+import { Player, ScheduledMatchup, Team } from '../../services/types';
 
-interface TeamDetails {
+interface TeamMatchupDetails {
   team: Team;
   starters: Player[];
-  projectedScore: number;
+  totalProjectedPoints: number;
+  totalActualScore: number;
 }
 
 interface ComparisonRow {
-  team1Player: Player | null;
-  team2Player: Player | null;
+  myPlayer: Player | null;
+  opponentPlayer: Player | null;
+  myPlayerActualScore: number;
+  opponentPlayerActualScore: number;
 }
 
 @Component({
@@ -26,68 +29,103 @@ export class MatchupComponent {
   private supabase = inject(SupabaseService);
   private uiService = inject(UiService);
 
-  currentWeek = signal(1);
-  myTeamDetails = signal<TeamDetails | null>(null);
-  opponentDetails = signal<TeamDetails | null>(null);
+  myTeamId = signal<number | null>(this.supabase.getMyTeam()?.id ?? null);
+  currentWeek = signal<number>(this.supabase.getCurrentFantasyWeek());
+  
+  currentMatchup = signal<ScheduledMatchup | null>(null);
+  otherMatchupsForWeek = signal<ScheduledMatchup[]>([]);
 
   constructor() {
     effect(() => {
-      this.loadMatchup(this.currentWeek());
+      this.loadMatchupForWeek(this.currentWeek());
     });
   }
 
-  loadMatchup(week: number) {
-    const myTeamId = this.supabase.getMyTeamId();
-    if (!myTeamId) return;
+  loadMatchupForWeek(week: number) {
+    const teamId = this.myTeamId();
+    if (!teamId) return;
 
-    const matchup = this.supabase.getMatchupForTeam(myTeamId, week);
-    if (!matchup) {
-      this.myTeamDetails.set(null);
-      this.opponentDetails.set(null);
-      return;
-    }
-
-    const myTeam = this.supabase.getTeamById(myTeamId);
-    const opponentId = matchup.team1Id === myTeamId ? matchup.team2Id : matchup.team1Id;
-    const opponentTeam = this.supabase.getTeamById(opponentId);
-
-    if (!myTeam || !opponentTeam) return;
-
-    this.myTeamDetails.set(this.getTeamDetails(myTeam));
-    this.opponentDetails.set(this.getTeamDetails(opponentTeam));
+    const allWeekMatchups = this.supabase.getMatchupsForWeek(week);
+    const myMatchup = allWeekMatchups.find(m => m.team1Id === teamId || m.team2Id === teamId) ?? null;
+    
+    this.currentMatchup.set(myMatchup);
+    this.otherMatchupsForWeek.set(allWeekMatchups.filter(m => m !== myMatchup));
   }
 
-  private getTeamDetails(team: Team): TeamDetails {
-    const roster = this.supabase.getRosterByTeamId(team.id);
-    const starters = roster ? this.populatePlayers(roster.starters) : [];
-    const projectedScore = starters.reduce((sum, p) => sum + p.projectedPoints, 0);
-    return { team, starters, projectedScore };
-  }
+  private getTeamDetails(teamId: number | null): TeamMatchupDetails | null {
+    if (!teamId) return null;
 
-  private populatePlayers(playerIds: number[]): Player[] {
-    return playerIds
+    const team = this.supabase.getTeamById(teamId);
+    if (!team) return null;
+    
+    const roster = this.supabase.getRosters().find(r => r.teamId === teamId);
+    if (!roster) return { team, starters: [], totalProjectedPoints: 0, totalActualScore: 0 };
+
+    const starters = roster.starters
       .map(id => this.supabase.getPlayerById(id))
       .filter((p): p is Player => !!p);
+
+    const totalProjectedPoints = starters.reduce((sum, player) => sum + player.projectedPoints, 0);
+    const totalActualScore = starters.reduce((sum, p) => sum + this.supabase.getPlayerActualScore(p.id, this.currentWeek()), 0);
+
+    return { team, starters, totalProjectedPoints, totalActualScore };
   }
+  
+  myTeamDetails = computed(() => this.getTeamDetails(this.myTeamId()));
 
-  comparisonRows = computed((): ComparisonRow[] => {
-    const team1Starters = this.myTeamDetails()?.starters ?? [];
-    const team2Starters = this.opponentDetails()?.starters ?? [];
+  opponentTeamDetails = computed(() => {
+    const matchup = this.currentMatchup();
+    const myId = this.myTeamId();
+    if (!matchup || !myId) return null;
     
-    const maxRows = Math.max(team1Starters.length, team2Starters.length);
-    const rows: ComparisonRow[] = [];
+    const opponentId = matchup.team1Id === myId ? matchup.team2Id : matchup.team1Id;
+    return this.getTeamDetails(opponentId);
+  });
+  
+  comparisonRows = computed((): ComparisonRow[] => {
+      const myStarters = this.myTeamDetails()?.starters ?? [];
+      const opponentStarters = this.opponentTeamDetails()?.starters ?? [];
+      const numRows = Math.max(myStarters.length, opponentStarters.length);
+      const rows: ComparisonRow[] = [];
 
-    for (let i = 0; i < maxRows; i++) {
-      rows.push({
-        team1Player: team1Starters[i] || null,
-        team2Player: team2Starters[i] || null,
-      });
-    }
-    return rows;
+      for(let i = 0; i < numRows; i++) {
+        const myPlayer = myStarters[i] || null;
+        const opponentPlayer = opponentStarters[i] || null;
+        rows.push({
+          myPlayer,
+          opponentPlayer,
+          myPlayerActualScore: myPlayer ? this.supabase.getPlayerActualScore(myPlayer.id, this.currentWeek()) : 0,
+          opponentPlayerActualScore: opponentPlayer ? this.supabase.getPlayerActualScore(opponentPlayer.id, this.currentWeek()) : 0,
+        });
+      }
+      return rows;
   });
 
-  getTeamColorClass = this.supabase.getTeamColorClass;
+  otherMatchups = computed(() => {
+    return this.otherMatchupsForWeek().map(matchup => {
+      const team1 = this.supabase.getTeamById(matchup.team1Id)!;
+      const team2 = this.supabase.getTeamById(matchup.team2Id)!;
+      const team1Details = this.getTeamDetails(matchup.team1Id)!;
+      const team2Details = this.getTeamDetails(matchup.team2Id)!;
+
+      return {
+        matchup,
+        team1,
+        team2,
+        team1Score: team1Details.totalActualScore,
+        team2Score: team2Details.totalActualScore,
+      }
+    });
+  });
+
+  currentWeekStatus = computed(() => this.supabase.getWeekStatus(this.currentWeek()));
   
+  changeWeek(delta: number) {
+    this.currentWeek.update(w => w + delta);
+  }
+  
+  getTeamColorClass = this.supabase.getTeamColorClass;
+
   showPlayerDetails(player: Player) {
     this.uiService.showPlayerDetails(player);
   }

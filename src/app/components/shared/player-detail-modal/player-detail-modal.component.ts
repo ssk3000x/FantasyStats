@@ -20,7 +20,6 @@ import { UiService } from '../../../services/ui.service';
             <img [src]="p.imageUrl" [alt]="p.name" class="w-20 h-20 rounded-full mr-4 object-cover">
             <div>
               <h2 class="text-2xl font-bold">{{ p.name }}</h2>
-              <p class="text-gray-400">{{ p.position }} - {{ p.team }}</p>
             </div>
           </div>
           

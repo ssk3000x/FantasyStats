@@ -1,33 +1,30 @@
 import { Player, Team, Roster, ScheduledMatchup } from './types';
 
-const players: Player[] = [
-  // QBs
-  { id: 101, name: 'Patrick Mahomes', position: 'QB', team: 'KC', imageUrl: 'https://picsum.photos/id/101/50', projectedPoints: 22.5 },
-  { id: 102, name: 'Josh Allen', position: 'QB', team: 'BUF', imageUrl: 'https://picsum.photos/id/102/50', projectedPoints: 24.1 },
-  { id: 103, name: 'Jalen Hurts', position: 'QB', team: 'PHI', imageUrl: 'https://picsum.photos/id/103/50', projectedPoints: 23.0 },
-  { id: 104, name: 'Lamar Jackson', position: 'QB', team: 'BAL', imageUrl: 'https://picsum.photos/id/104/50', projectedPoints: 21.8 },
-  { id: 105, name: 'C.J. Stroud', position: 'QB', team: 'HOU', imageUrl: 'https://picsum.photos/id/105/50', projectedPoints: 20.5 },
-
-  // RBs
-  { id: 201, name: 'Christian McCaffrey', position: 'RB', team: 'SF', imageUrl: 'https://picsum.photos/id/201/50', projectedPoints: 18.7 },
-  { id: 202, name: 'Bijan Robinson', position: 'RB', team: 'ATL', imageUrl: 'https://picsum.photos/id/202/50', projectedPoints: 15.2 },
-  { id: 203, name: 'Breece Hall', position: 'RB', team: 'NYJ', imageUrl: 'https://picsum.photos/id/203/50', projectedPoints: 14.8 },
-  { id: 204, name: 'Kyren Williams', position: 'RB', team: 'LAR', imageUrl: 'https://picsum.photos/id/204/50', projectedPoints: 16.1 },
-  { id: 205, name: 'Travis Etienne Jr.', position: 'RB', team: 'JAC', imageUrl: 'https://picsum.photos/id/205/50', projectedPoints: 13.5 },
-
-  // WRs
-  { id: 301, name: 'Justin Jefferson', position: 'WR', team: 'MIN', imageUrl: 'https://picsum.photos/id/301/50', projectedPoints: 16.5 },
-  { id: 302, name: 'CeeDee Lamb', position: 'WR', team: 'DAL', imageUrl: 'https://picsum.photos/id/302/50', projectedPoints: 17.1 },
-  { id: 303, name: 'Tyreek Hill', position: 'WR', team: 'MIA', imageUrl: 'https://picsum.photos/id/303/50', projectedPoints: 18.0 },
-  { id: 304, name: 'Amon-Ra St. Brown', position: 'WR', team: 'DET', imageUrl: 'https://picsum.photos/id/304/50', projectedPoints: 15.8 },
-  { id: 305, name: 'A.J. Brown', position: 'WR', team: 'PHI', imageUrl: 'https://picsum.photos/id/305/50', projectedPoints: 14.9 },
-
-  // TEs
-  { id: 401, name: 'Travis Kelce', position: 'TE', team: 'KC', imageUrl: 'https://picsum.photos/id/401/50', projectedPoints: 12.3 },
-  { id: 402, name: 'Sam LaPorta', position: 'TE', team: 'DET', imageUrl: 'https://picsum.photos/id/402/50', projectedPoints: 10.5 },
-  { id: 403, name: 'Mark Andrews', position: 'TE', team: 'BAL', imageUrl: 'https://picsum.photos/id/403/50', projectedPoints: 9.8 },
-  { id: 404, name: 'George Kittle', position: 'TE', team: 'SF', imageUrl: 'https://picsum.photos/id/404/50', projectedPoints: 9.2 },
+const playerNames = [
+  'Vedh Atmakuri', 'Rachel Chen', 'Isabella Cruz', 'Daniel Garcia', 'Chase Gonzalez', 
+  'Isaac Icaza', 'Gabriel John', 'Rayan Khan', 'Jennifer Khong', 'Swarchis Kulkarni', 
+  'Nathan Lee', 'Adalyn Lin', 'Jeff Lutze', 'Srihita Madiraju', 'Ingrid Kope', 
+  'Nalani Matsumura', 'Maxim Melisbek', 'Bhargav Nemani', 'Litong Nie', 'Julia Nikolov', 
+  'Raahil Sengupta', 'Siya Shah', 'Peter Stolc', 'Kayla Su', 'Rex Teixeira', 
+  'Michael Tsudama', 'Aishwarya Vinodh', 'Sophia Weiss', 'Michael Wu', 'Chengmin Xu', 
+  'Rihito Yamaguchi', 'Daniel Yeon', 'Harry Yin'
 ];
+
+const players: Player[] = playerNames.map((name, index) => {
+    const id = 101 + index;
+    const nameHash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const projectedPoints = 5 + (nameHash % 200) / 10;
+    const score1 = 5 + ((nameHash * 3) % 250) / 10;
+    const score2 = 5 + ((nameHash * 7) % 250) / 10;
+
+    return {
+        id: id,
+        name: name,
+        imageUrl: `https://picsum.photos/id/${id}/50`,
+        projectedPoints: parseFloat(projectedPoints.toFixed(1)),
+        weeklyScores: [parseFloat(score1.toFixed(1)), parseFloat(score2.toFixed(1))]
+    };
+});
 
 const teams: Team[] = [
   { id: 1, name: 'Swarchis', wins: 0, losses: 0, ties: 0, pointsFor: 0 },
@@ -38,18 +35,22 @@ const teams: Team[] = [
 
 const rosters: Roster[] = [
   // Swarchis
-  { teamId: 1, starters: [101, 201, 301], bench: [401] },
+  { teamId: 1, starters: [101, 102, 103], bench: [104] },
   // Gabriel
-  { teamId: 2, starters: [102, 202, 302], bench: [402] },
+  { teamId: 2, starters: [105, 106, 107], bench: [108] },
   // Rihito
-  { teamId: 3, starters: [103, 203, 303], bench: [403] },
+  { teamId: 3, starters: [109, 110, 111], bench: [112] },
   // Daniel
-  { teamId: 4, starters: [104, 204, 304], bench: [404] },
+  { teamId: 4, starters: [113, 114, 115], bench: [116] },
 ];
 
 const schedule: ScheduledMatchup[] = [
+  // Week 1
   { week: 1, team1Id: 1, team2Id: 2 }, // Swarchis vs Gabriel
   { week: 1, team1Id: 3, team2Id: 4 }, // Rihito vs Daniel
+  // Week 2
+  { week: 2, team1Id: 1, team2Id: 3 }, // Swarchis vs Rihito
+  { week: 2, team1Id: 2, team2Id: 4 }, // Gabriel vs Daniel
 ];
 
 export const MOCK_DATA = {

@@ -4,7 +4,7 @@ import { SupabaseService } from '../../services/supabase.service';
 import { Player, Roster, Team } from '../../services/types';
 import { UiService } from '../../services/ui.service';
 
-type PositionFilter = 'FREE' | 'ALL' | 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DEF';
+type PlayerFilter = 'FREE' | 'ALL';
 
 interface PlayerWithOwner extends Player {
   ownerTeamName: string | null;
@@ -24,7 +24,7 @@ export class PlayersComponent {
   isLoading = signal(true);
   players = signal<PlayerWithOwner[]>([]);
   myRoster = signal<Roster | null>(null);
-  filterPosition = signal<PositionFilter>('FREE');
+  filterPosition = signal<PlayerFilter>('FREE');
 
   isModalOpen = signal(false);
   selectedPlayerToAdd = signal<Player | null>(null);
@@ -32,7 +32,7 @@ export class PlayersComponent {
   
   transactionSuccess = signal(false);
 
-  positions: PositionFilter[] = ['FREE', 'ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+  positions: PlayerFilter[] = ['FREE', 'ALL'];
 
   filteredPlayers = computed(() => {
     const pos = this.filterPosition();
@@ -42,10 +42,7 @@ export class PlayersComponent {
       return allPlayers.filter(p => !p.ownerTeamName);
     }
     
-    if (pos === 'ALL') {
-      return allPlayers;
-    }
-    return allPlayers.filter(p => p.position === pos);
+    return allPlayers;
   });
   
   myBench = computed(() => {
