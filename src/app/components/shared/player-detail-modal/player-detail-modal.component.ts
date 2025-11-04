@@ -17,7 +17,6 @@ import { UiService } from '../../../services/ui.service';
           </button>
 
           <div class="flex items-center p-6 border-b border-gray-700">
-            <img [src]="p.imageUrl" [alt]="p.name" class="w-20 h-20 rounded-full mr-4 object-cover">
             <div>
               <h2 class="text-2xl font-bold">{{ p.name }}</h2>
             </div>

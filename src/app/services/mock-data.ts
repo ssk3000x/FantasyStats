@@ -20,7 +20,6 @@ const players: Player[] = playerNames.map((name, index) => {
     return {
         id: id,
         name: name,
-        imageUrl: `https://picsum.photos/id/${id}/50`,
         projectedPoints: parseFloat(projectedPoints.toFixed(1)),
         weeklyScores: [parseFloat(score1.toFixed(1)), parseFloat(score2.toFixed(1))]
     };

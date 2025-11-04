@@ -33,7 +33,6 @@
           @if (isEditing()) {
             @for (player of tempStarters(); track player.id) {
               <div class="bg-gray-800 p-3 rounded-lg flex items-center">
-                <img [src]="player.imageUrl" [alt]="player.name" class="w-12 h-12 rounded-full mr-4 object-cover">
                 <div class="flex-grow">
                   <p class="font-semibold">{{ player.name }}</p>
                 </div>
@@ -43,7 +42,6 @@
           } @else {
             @for (player of starters(); track player.id) {
             <div (click)="showPlayerDetails(player)" class="bg-gray-800 p-3 rounded-lg flex items-center cursor-pointer hover:bg-gray-700 transition-colors">
-              <img [src]="player.imageUrl" [alt]="player.name" class="w-12 h-12 rounded-full mr-4 object-cover">
               <div class="flex-grow">
                 <p class="font-semibold">{{ player.name }}</p>
               </div>
@@ -72,7 +70,6 @@
           @if (isEditing()) {
             @for (player of tempBench(); track player.id) {
               <div class="bg-gray-800 p-3 rounded-lg flex items-center">
-                <img [src]="player.imageUrl" [alt]="player.name" class="w-12 h-12 rounded-full mr-4 object-cover">
                 <div class="flex-grow">
                   <p class="font-semibold">{{ player.name }}</p>
                 </div>
@@ -82,7 +79,6 @@
           } @else {
             @for (player of bench(); track player.id) {
               <div (click)="showPlayerDetails(player)" class="bg-gray-800 p-3 rounded-lg flex items-center cursor-pointer hover:bg-gray-700 transition-colors">
-                <img [src]="player.imageUrl" [alt]="player.name" class="w-12 h-12 rounded-full mr-4 object-cover">
                 <div class="flex-grow">
                   <p class="font-semibold">{{ player.name }}</p>
                 </div>
