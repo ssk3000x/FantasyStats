@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { Player } from './types';
+import { SupabaseService } from './supabase.service';
 
 export type NotificationType = 'success' | 'error';
 
@@ -8,15 +9,29 @@ export interface Notification {
   type: NotificationType;
 }
 
+export interface PlayerDetails extends Player {
+  projectedScore: number;
+  ownerTeamName?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class UiService {
-  selectedPlayer = signal<Player | null>(null);
+  private supabase = inject(SupabaseService);
+  
+  selectedPlayer = signal<PlayerDetails | null>(null);
   notification = signal<Notification | null>(null);
 
-  showPlayerDetails(player: Player) {
-    this.selectedPlayer.set(player);
+  showPlayerDetails(player: Player, ownerTeamName?: string | null) {
+    const currentWeek = this.supabase.getCurrentFantasyWeek();
+    const projectedScore = this.supabase.getPlayerProjectedScore(player.id, currentWeek);
+    
+    this.selectedPlayer.set({
+      ...player,
+      projectedScore,
+      ownerTeamName,
+    });
   }
 
   hidePlayerDetails() {

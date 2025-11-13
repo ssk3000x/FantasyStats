@@ -35,7 +35,8 @@
               <p class="font-semibold">{{ player.name }}</p>
             </div>
             <div class="ml-auto text-right">
-              <p class="font-bold text-lg text-primary">{{ player.projectedPoints.toFixed(1) }}</p>
+              <p class="font-bold text-lg text-primary">{{ player.actualScore.toFixed(1) }}</p>
+              <p class="text-xs text-gray-400 font-normal">Proj. {{ player.projectedScore.toFixed(1) }}</p>
             </div>
           </div>
           }
@@ -57,7 +58,8 @@
                 <p class="font-semibold">{{ player.name }}</p>
               </div>
               <div class="ml-auto text-right">
-                <p class="font-bold text-lg text-primary">{{ player.projectedPoints.toFixed(1) }}</p>
+                <p class="font-bold text-lg text-primary">{{ player.actualScore.toFixed(1) }}</p>
+                <p class="text-xs text-gray-400 font-normal">Proj. {{ player.projectedScore.toFixed(1) }}</p>
               </div>
             </div>
           }

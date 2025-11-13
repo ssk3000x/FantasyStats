@@ -16,6 +16,8 @@ interface ComparisonRow {
   opponentPlayer: Player | null;
   myPlayerActualScore: number;
   opponentPlayerActualScore: number;
+  myPlayerProjectedScore: number;
+  opponentPlayerProjectedScore: number;
 }
 
 @Component({
@@ -63,7 +65,7 @@ export class MatchupComponent {
       .map(id => this.supabase.getPlayerById(id))
       .filter((p): p is Player => !!p);
 
-    const totalProjectedPoints = starters.reduce((sum, player) => sum + player.projectedPoints, 0);
+    const totalProjectedPoints = starters.reduce((sum, player) => sum + this.supabase.getPlayerProjectedScore(player.id, this.currentWeek()), 0);
     const totalActualScore = starters.reduce((sum, p) => sum + this.supabase.getPlayerActualScore(p.id, this.currentWeek()), 0);
 
     return { team, starters, totalProjectedPoints, totalActualScore };
@@ -94,6 +96,8 @@ export class MatchupComponent {
           opponentPlayer,
           myPlayerActualScore: myPlayer ? this.supabase.getPlayerActualScore(myPlayer.id, this.currentWeek()) : 0,
           opponentPlayerActualScore: opponentPlayer ? this.supabase.getPlayerActualScore(opponentPlayer.id, this.currentWeek()) : 0,
+          myPlayerProjectedScore: myPlayer ? this.supabase.getPlayerProjectedScore(myPlayer.id, this.currentWeek()) : 0,
+          opponentPlayerProjectedScore: opponentPlayer ? this.supabase.getPlayerProjectedScore(opponentPlayer.id, this.currentWeek()) : 0,
         });
       }
       return rows;
@@ -131,7 +135,7 @@ export class MatchupComponent {
   
   getTeamColorClass = this.supabase.getTeamColorClass;
 
-  showPlayerDetails(player: Player) {
-    this.uiService.showPlayerDetails(player);
+  showPlayerDetails(player: Player, ownerName: string) {
+    this.uiService.showPlayerDetails(player, ownerName);
   }
 }

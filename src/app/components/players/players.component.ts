@@ -72,8 +72,8 @@ export class PlayersComponent {
 
   getTeamColorClass = this.supabase.getTeamColorClass;
   
-  showPlayerDetails(player: Player) {
-    this.uiService.showPlayerDetails(player);
+  showPlayerDetails(player: PlayerWithOwner) {
+    this.uiService.showPlayerDetails(player, player.ownerTeamName);
   }
 
   openAddPlayerModal(player: PlayerWithOwner) {

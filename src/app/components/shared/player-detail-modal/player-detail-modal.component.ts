@@ -1,6 +1,7 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UiService } from '../../../services/ui.service';
+import { SupabaseService } from '../../../services/supabase.service';
 
 @Component({
   selector: 'app-player-detail-modal',
@@ -19,13 +20,16 @@ import { UiService } from '../../../services/ui.service';
           <div class="flex items-center p-6 border-b border-gray-700">
             <div>
               <h2 class="text-2xl font-bold">{{ p.name }}</h2>
+              @if(p.ownerTeamName) {
+                <p class="text-sm text-gray-400">Owned by <span class="font-semibold">{{ p.ownerTeamName }}</span></p>
+              }
             </div>
           </div>
           
           <div class="p-6">
               <div>
-                <p class="text-sm text-gray-400">Projected Points</p>
-                <p class="font-semibold text-lg text-primary">{{ p.projectedPoints.toFixed(1) }}</p>
+                <p class="text-sm text-gray-400">Projected Points (Week {{ currentWeek() }})</p>
+                <p class="font-semibold text-lg text-primary">{{ p.projectedScore.toFixed(1) }}</p>
               </div>
 
               @if(p.weeklyScores && p.weeklyScores.length > 0) {
@@ -78,9 +82,10 @@ import { UiService } from '../../../services/ui.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlayerDetailModalComponent {
-  // FIX: Add explicit type to injected service
   private uiService: UiService = inject(UiService);
+  private supabase: SupabaseService = inject(SupabaseService);
   player = this.uiService.selectedPlayer;
+  currentWeek = computed(() => this.supabase.getCurrentFantasyWeek());
 
   close() {
     this.uiService.hidePlayerDetails();

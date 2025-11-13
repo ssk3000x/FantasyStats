@@ -7,6 +7,11 @@ import { SupabaseService } from '../../services/supabase.service';
 import { UiService } from '../../services/ui.service';
 import { Player, Roster, Team } from '../../services/types';
 
+interface DisplayPlayer extends Player {
+  actualScore: number;
+  projectedScore: number;
+}
+
 @Component({
   selector: 'app-team-detail',
   standalone: true,
@@ -48,22 +53,31 @@ export class TeamDetailComponent {
     return this.supabase.getRosterForTeam(id) ?? null;
   });
 
-  private populatePlayers(playerIds: number[]): Player[] {
+  private populatePlayersWithScores(playerIds: number[]): DisplayPlayer[] {
+    const currentWeek = this.supabase.getCurrentFantasyWeek();
     return playerIds
-      .map(id => this.supabase.getPlayerById(id))
-      .filter((p): p is Player => !!p);
+      .map(id => {
+        const player = this.supabase.getPlayerById(id);
+        if (!player) return null;
+        return {
+          ...player,
+          actualScore: this.supabase.getPlayerActualScore(player.id, currentWeek),
+          projectedScore: this.supabase.getPlayerProjectedScore(player.id, currentWeek),
+        };
+      })
+      .filter((p): p is DisplayPlayer => !!p);
   }
 
   starters = computed(() => {
     const r = this.roster();
     if (!r) return [];
-    return this.populatePlayers(r.starters);
+    return this.populatePlayersWithScores(r.starters);
   });
 
   bench = computed(() => {
     const r = this.roster();
     if (!r) return [];
-    return this.populatePlayers(r.bench);
+    return this.populatePlayersWithScores(r.bench);
   });
   
   teamColorClass = computed(() => {
@@ -72,7 +86,7 @@ export class TeamDetailComponent {
   });
 
   showPlayerDetails(player: Player) {
-    this.uiService.showPlayerDetails(player);
+    this.uiService.showPlayerDetails(player, this.team()?.name);
   }
 
   proposeTrade(teamId: number) {
