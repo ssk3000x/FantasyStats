@@ -18,12 +18,19 @@ const players: Player[] = playerNames.map((name, index) => {
     const projectedPoints = 5 + (nameHash % 200) / 10;
     const score1 = 5 + ((nameHash * 3) % 250) / 10;
     const score2 = 5 + ((nameHash * 7) % 250) / 10;
+    const score3 = 5 + ((nameHash * 11) % 250) / 10;
+    const score4 = 5 + ((nameHash * 13) % 250) / 10;
 
     return {
         id: id,
         name: name,
         projectedPoints: parseFloat(projectedPoints.toFixed(1)),
-        weeklyScores: [parseFloat(score1.toFixed(1)), parseFloat(score2.toFixed(1))]
+        weeklyScores: [
+            parseFloat(score1.toFixed(1)), 
+            parseFloat(score2.toFixed(1)),
+            parseFloat(score3.toFixed(1)),
+            parseFloat(score4.toFixed(1)),
+        ]
     };
 });
 
@@ -62,6 +69,12 @@ const schedule: ScheduledMatchup[] = [
   // Week 2
   { week: 2, team1Id: 1, team2Id: 3 }, // Swarchis vs Rihito
   { week: 2, team1Id: 2, team2Id: 4 }, // Gabriel vs Daniel
+  // Week 3
+  { week: 3, team1Id: 1, team2Id: 4 }, // Swarchis vs Daniel
+  { week: 3, team1Id: 2, team2Id: 3 }, // Gabriel vs Rihito
+  // Week 4
+  { week: 4, team1Id: 1, team2Id: 2 }, // Swarchis vs Gabriel
+  { week: 4, team1Id: 3, team2Id: 4 }, // Rihito vs Daniel
 ];
 
 const tradeProposals: TradeProposal[] = [];

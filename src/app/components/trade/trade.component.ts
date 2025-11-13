@@ -15,10 +15,11 @@ import { UiService } from '../../services/ui.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TradeComponent {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private supabase = inject(SupabaseService);
-  private uiService = inject(UiService);
+  // FIX: Add explicit types for injected services to resolve 'unknown' type errors.
+  private route: ActivatedRoute = inject(ActivatedRoute);
+  private router: Router = inject(Router);
+  private supabase: SupabaseService = inject(SupabaseService);
+  private uiService: UiService = inject(UiService);
 
   // Modal states
   showMyPlayersModal = signal(false);
@@ -27,18 +28,27 @@ export class TradeComponent {
   myTeam = computed(() => this.supabase.getMyTeam());
   myRoster = computed(() => this.supabase.getMyRoster());
 
-  opponentTeamId$ = this.route.params.pipe(map(params => parseInt(params['teamId'], 10)));
-  opponentTeam = toSignal(this.opponentTeamId$.pipe(
-    map(id => this.supabase.getTeamById(id) ?? null)
-  ));
-  opponentRoster = toSignal(this.opponentTeamId$.pipe(
-    map(id => this.supabase.getRosterForTeam(id) ?? null)
-  ));
+  // FIX: Refactor to use toSignal and computed to ensure proper type inference from route params.
+  // This resolves multiple 'unknown' type errors downstream.
+  opponentTeamId = toSignal(this.route.params.pipe(map(params => parseInt(params['teamId'], 10))));
+
+  opponentTeam = computed(() => {
+    const id = this.opponentTeamId();
+    if (typeof id !== 'number' || isNaN(id)) return null;
+    return this.supabase.getTeamById(id) ?? null;
+  });
+
+  opponentRoster = computed(() => {
+    const id = this.opponentTeamId();
+    if (typeof id !== 'number' || isNaN(id)) return null;
+    return this.supabase.getRosterForTeam(id) ?? null;
+  });
 
   myPlayersToOffer = signal<Player[]>([]);
   theirPlayersToRequest = signal<Player[]>([]);
 
-  private getPlayersFromRoster(roster: Roster | null): Player[] {
+  // FIX: Allow roster to be undefined to handle initial state from toSignal.
+  private getPlayersFromRoster(roster: Roster | null | undefined): Player[] {
     if (!roster) return [];
     const playerIds = [...roster.starters, ...roster.bench];
     return playerIds

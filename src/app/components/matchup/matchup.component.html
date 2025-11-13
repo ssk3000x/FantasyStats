@@ -14,91 +14,101 @@
                 <span class="text-sm font-semibold text-blue-400">Upcoming</span>
             }
         </div>
-        <button (click)="changeWeek(1)" class="p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition disabled:opacity-50" [disabled]="currentWeek() === 2">
+        <button (click)="changeWeek(1)" class="p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition disabled:opacity-50" [disabled]="currentWeek() === totalWeeks()">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         </button>
     </header>
 
-    @if (myTeamDetails() && opponentTeamDetails()) {
-      <div class="bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 mb-8 grid grid-cols-5 gap-4 items-center">
-        <div class="col-span-2 text-left">
-          <h2 class="text-xl sm:text-2xl font-bold truncate" [class]="getTeamColorClass(myTeamDetails()!.team.name)">{{ myTeamDetails()!.team.name }}</h2>
-          <p class="text-xs text-gray-400">{{ myTeamDetails()!.team.wins }}-{{ myTeamDetails()!.team.losses }}</p>
-        </div>
-        <div class="col-span-1 text-center">
-            <div class="flex items-baseline justify-center space-x-2">
-                <p class="text-3xl sm:text-4xl font-bold">{{ myTeamDetails()!.totalActualScore.toFixed(1) }}</p>
-                <span class="text-2xl text-gray-500">-</span>
-                <p class="text-3xl sm:text-4xl font-bold">{{ opponentTeamDetails()!.totalActualScore.toFixed(1) }}</p>
-            </div>
-            <p class="text-xs text-gray-400 mt-1">PROJ: {{ myTeamDetails()!.totalProjectedPoints.toFixed(1) }} - {{ opponentTeamDetails()!.totalProjectedPoints.toFixed(1) }}</p>
-        </div>
-        <div class="col-span-2 text-right">
-          <h2 class="text-xl sm:text-2xl font-bold truncate" [class]="getTeamColorClass(opponentTeamDetails()!.team.name)">{{ opponentTeamDetails()!.team.name }}</h2>
-          <p class="text-xs text-gray-400">{{ opponentTeamDetails()!.team.wins }}-{{ opponentTeamDetails()!.team.losses }}</p>
-        </div>
-      </div>
-
-      <div class="space-y-2">
-        @for (row of comparisonRows(); track $index) {
-          <div class="flex items-center bg-gray-800 p-2 rounded-md">
-            <div class="flex-1 flex items-center space-x-3">
-              <div class="flex-grow">
-                <p class="font-semibold text-white text-left cursor-pointer hover:text-primary" (click)="row.myPlayer && showPlayerDetails(row.myPlayer)">{{ row.myPlayer?.name || 'Empty Slot' }}</p>
-              </div>
-              <div class="text-right">
-                <p class="font-bold text-lg">{{ row.myPlayerActualScore.toFixed(1) }}</p>
-                <p class="text-xs text-gray-400">{{ row.myPlayer ? row.myPlayer.projectedPoints.toFixed(1) : '0.0' }}</p>
-              </div>
-            </div>
-            
-            <div class="w-px h-10 bg-gray-600 mx-4"></div>
-            
-            <div class="flex-1 flex items-center space-x-3 flex-row-reverse">
-              <div class="flex-grow">
-                <p class="font-semibold text-white text-right cursor-pointer hover:text-primary" (click)="row.opponentPlayer && showPlayerDetails(row.opponentPlayer)">{{ row.opponentPlayer?.name || 'Empty Slot' }}</p>
-              </div>
-              <div class="text-left">
-                <p class="font-bold text-lg">{{ row.opponentPlayerActualScore.toFixed(1) }}</p>
-                <p class="text-xs text-gray-400">{{ row.opponentPlayer ? row.opponentPlayer.projectedPoints.toFixed(1) : '0.0' }}</p>
-              </div>
-            </div>
+    @if (dataLoaded()) {
+      @if (myTeamDetails() && opponentTeamDetails()) {
+        <div class="bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 mb-8 grid grid-cols-5 gap-4 items-center">
+          <div class="col-span-2 text-left">
+            <h2 class="text-xl sm:text-2xl font-bold truncate" [class]="getTeamColorClass(myTeamDetails()!.team.name)">{{ myTeamDetails()!.team.name }}</h2>
+            <p class="text-xs text-gray-400">{{ myTeamDetails()!.team.wins }}-{{ myTeamDetails()!.team.losses }}</p>
           </div>
-        }
-      </div>
+          <div class="col-span-1 text-center">
+              <div class="flex items-baseline justify-center space-x-2">
+                  <p class="text-3xl sm:text-4xl font-bold">{{ myTeamDetails()!.totalActualScore.toFixed(1) }}</p>
+                  <span class="text-2xl text-gray-500">-</span>
+                  <p class="text-3xl sm:text-4xl font-bold">{{ opponentTeamDetails()!.totalActualScore.toFixed(1) }}</p>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">PROJ: {{ myTeamDetails()!.totalProjectedPoints.toFixed(1) }} - {{ opponentTeamDetails()!.totalProjectedPoints.toFixed(1) }}</p>
+          </div>
+          <div class="col-span-2 text-right">
+            <h2 class="text-xl sm:text-2xl font-bold truncate" [class]="getTeamColorClass(opponentTeamDetails()!.team.name)">{{ opponentTeamDetails()!.team.name }}</h2>
+            <p class="text-xs text-gray-400">{{ opponentTeamDetails()!.team.wins }}-{{ opponentTeamDetails()!.team.losses }}</p>
+          </div>
+        </div>
 
-      <div class="mt-10">
-        <h3 class="text-xl font-semibold mb-3 text-center text-gray-300">Other Week {{ currentWeek() }} Matchups</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-          @for (matchup of otherMatchups(); track matchup.matchup.team1Id) {
-            <div class="bg-gray-800 p-4 rounded-lg grid grid-cols-5 gap-2 items-center">
-              <div class="col-span-2 text-left">
-                <p class="font-semibold truncate" [class]="getTeamColorClass(matchup.team1.name)">{{ matchup.team1.name }}</p>
-                <p class="text-xs text-gray-400">{{ matchup.team1.wins }}-{{ matchup.team1.losses }}</p>
+        <div class="space-y-2">
+          @for (row of comparisonRows(); track $index) {
+            <div class="flex items-center bg-gray-800 p-2 rounded-md">
+              <div class="flex-1 flex items-center space-x-3">
+                <div class="flex-grow">
+                  <p class="font-semibold text-white text-left cursor-pointer hover:text-primary" (click)="row.myPlayer && showPlayerDetails(row.myPlayer)">{{ row.myPlayer?.name || 'Empty Slot' }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-bold text-lg">{{ row.myPlayerActualScore.toFixed(1) }}</p>
+                  <p class="text-xs text-gray-400">{{ row.myPlayer ? row.myPlayer.projectedPoints.toFixed(1) : '0.0' }}</p>
+                </div>
               </div>
-              <div class="col-span-1 text-center">
-                  <div class="flex items-center justify-center space-x-1">
-                    <p class="font-bold text-lg">{{ matchup.team1Score.toFixed(1) }}</p>
-                    <span class="text-gray-500">-</span>
-                    <p class="font-bold text-lg">{{ matchup.team2Score.toFixed(1) }}</p>
-                  </div>
-                  @if (currentWeekStatus() === 'past') {
-                    <p class="text-xs text-gray-400">Final</p>
-                  } @else if (currentWeekStatus() === 'current') {
-                    <p class="text-xs text-green-400">Live</p>
-                  } @else {
-                    <p class="text-xs text-blue-400">Upcoming</p>
-                  }
-              </div>
-              <div class="col-span-2 text-right">
-                  <p class="font-semibold truncate" [class]="getTeamColorClass(matchup.team2.name)">{{ matchup.team2.name }}</p>
-                  <p class="text-xs text-gray-400">{{ matchup.team2.wins }}-{{ matchup.team2.losses }}</p>
+              
+              <div class="w-px h-10 bg-gray-600 mx-4"></div>
+              
+              <div class="flex-1 flex items-center space-x-3 flex-row-reverse">
+                <div class="flex-grow">
+                  <p class="font-semibold text-white text-right cursor-pointer hover:text-primary" (click)="row.opponentPlayer && showPlayerDetails(row.opponentPlayer)">{{ row.opponentPlayer?.name || 'Empty Slot' }}</p>
+                </div>
+                <div class="text-left">
+                  <p class="font-bold text-lg">{{ row.opponentPlayerActualScore.toFixed(1) }}</p>
+                  <p class="text-xs text-gray-400">{{ row.opponentPlayer ? row.opponentPlayer.projectedPoints.toFixed(1) : '0.0' }}</p>
+                </div>
               </div>
             </div>
           }
         </div>
-      </div>
 
+        <div class="mt-10">
+          <h3 class="text-xl font-semibold mb-3 text-center text-gray-300">Other Week {{ currentWeek() }} Matchups</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+            @for (matchup of otherMatchups(); track matchup.matchup.team1Id) {
+              <div class="bg-gray-800 p-4 rounded-lg grid grid-cols-5 gap-2 items-center">
+                <div class="col-span-2 text-left">
+                  <p class="font-semibold truncate" [class]="getTeamColorClass(matchup.team1.name)">{{ matchup.team1.name }}</p>
+                  <p class="text-xs text-gray-400">{{ matchup.team1.wins }}-{{ matchup.team1.losses }}</p>
+                </div>
+                <div class="col-span-1 text-center">
+                    <div class="flex items-center justify-center space-x-1">
+                      <p class="font-bold text-lg">{{ matchup.team1Score.toFixed(1) }}</p>
+                      <span class="text-gray-500">-</span>
+                      <p class="font-bold text-lg">{{ matchup.team2Score.toFixed(1) }}</p>
+                    </div>
+                    @if (currentWeekStatus() === 'past') {
+                      <p class="text-xs text-gray-400">Final</p>
+                    } @else if (currentWeekStatus() === 'current') {
+                      <p class="text-xs text-green-400">Live</p>
+                    } @else {
+                      <p class="text-xs text-blue-400">Upcoming</p>
+                    }
+                </div>
+                <div class="col-span-2 text-right">
+                    <p class="font-semibold truncate" [class]="getTeamColorClass(matchup.team2.name)">{{ matchup.team2.name }}</p>
+                    <p class="text-xs text-gray-400">{{ matchup.team2.wins }}-{{ matchup.team2.losses }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+      } @else {
+        <div class="text-center text-gray-400 mt-20 flex flex-col items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h2 class="text-2xl font-bold mt-4">No Matchup Scheduled</h2>
+            <p class="mt-2 max-w-md">It looks like your team has a bye for Week {{ currentWeek() }}, or the league schedule has not been set for this week yet.</p>
+        </div>
+      }
     } @else {
       <p class="text-center text-gray-400 mt-20">Loading matchup...</p>
     }

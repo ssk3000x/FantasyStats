@@ -15,10 +15,11 @@ import { Player, Roster, Team } from '../../services/types';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TeamDetailComponent {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  supabase = inject(SupabaseService);
-  uiService = inject(UiService);
+  // FIX: Add explicit types for injected services to resolve 'unknown' type errors.
+  private route: ActivatedRoute = inject(ActivatedRoute);
+  private router: Router = inject(Router);
+  supabase: SupabaseService = inject(SupabaseService);
+  uiService: UiService = inject(UiService);
 
   // This is the team being viewed from the URL
   viewedTeamId = toSignal(this.route.params.pipe(map(params => parseInt(params['teamId'], 10))));
@@ -35,13 +36,15 @@ export class TeamDetailComponent {
 
   team = computed(() => {
     const id = this.viewedTeamId();
-    if (id === undefined) return null;
+    // FIX: Add type check to narrow `id` from `unknown` to `number`.
+    if (typeof id !== 'number' || isNaN(id)) return null;
     return this.supabase.getTeamById(id) ?? null;
   });
   
   roster = computed(() => {
     const id = this.viewedTeamId();
-    if (id === undefined) return null;
+    // FIX: Add type check to narrow `id` from `unknown` to `number`.
+    if (typeof id !== 'number' || isNaN(id)) return null;
     return this.supabase.getRosterForTeam(id) ?? null;
   });
 

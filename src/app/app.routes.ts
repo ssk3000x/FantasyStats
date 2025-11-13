@@ -7,6 +7,7 @@ import { PlayersComponent } from './components/players/players.component';
 import { LeagueComponent } from './components/league/league.component';
 import { TradeComponent } from './components/trade/trade.component';
 import { TeamDetailComponent } from './components/initial-setup/initial-setup.component';
+import { AdminComponent } from './components/admin/admin.component';
 
 export const APP_ROUTES: Routes = [
   {
@@ -42,6 +43,11 @@ export const APP_ROUTES: Routes = [
   {
     path: 'team/:teamId',
     component: TeamDetailComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'admin-password-tool',
+    component: AdminComponent,
     canActivate: [authGuard]
   },
   {

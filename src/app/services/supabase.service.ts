@@ -6,11 +6,11 @@ import { supabaseUrl, supabaseKey } from './supabase.config';
 const USER_SESSION_KEY = 'fantasy_user_team_id';
 
 // Define the date ranges for each week
-const nextYear = new Date().getFullYear() + 1;
 const FANTASY_WEEKS = [
-  { week: 1, start: new Date(`${nextYear}-09-04T00:00:00Z`), end: new Date(`${nextYear}-09-10T23:59:59Z`) },
-  { week: 2, start: new Date(`${nextYear}-09-11T00:00:00Z`), end: new Date(`${nextYear}-09-17T23:59:59Z`) },
-  // Add more weeks here as the season progresses
+  { week: 1, start: new Date(`2025-11-09T00:00:00Z`), end: new Date(`2025-11-15T23:59:59Z`) },
+  { week: 2, start: new Date(`2025-11-17T00:00:00Z`), end: new Date(`2025-11-23T23:59:59Z`) },
+  { week: 3, start: new Date(`2025-11-25T00:00:00Z`), end: new Date(`2025-12-01T23:59:59Z`) },
+  { week: 4, start: new Date(`2025-12-03T00:00:00Z`), end: new Date(`2025-12-09T23:59:59Z`) },
 ];
 
 @Injectable({
@@ -149,86 +149,100 @@ export class SupabaseService {
   async logout(): Promise<void> {
     await this.supabase.auth.signOut();
     window.sessionStorage.removeItem(USER_SESSION_KEY);
-    this.loggedInTeamId.set(null);
   }
 
-  isAuthenticated(): boolean {
-    return this.currentUser() !== null;
-  }
+  // --- Getters for readonly data ---
+  isAuthenticated = computed(() => !!this.currentUser());
+  getLoggedInTeamId = () => this.loggedInTeamId();
   
-  getLoggedInTeamId(): number | null {
-      return this.loggedInTeamId();
-  }
+  getPlayers = () => this.players();
+  getTeams = () => this.teams();
+  getRosters = () => this.rosters();
+  
+  getMyTeam = computed(() => {
+    const id = this.getLoggedInTeamId();
+    if (!id) return null;
+    return this.getTeamById(id);
+  });
 
-  // --- Date/Week Management ---
+  getMyRoster = computed(() => {
+    const id = this.getLoggedInTeamId();
+    if (!id) return null;
+    return this.getRosterForTeam(id);
+  });
+  
+  getPlayerById = (id: number) => this.players().find(p => p.id === id) ?? null;
+  getTeamById = (id: number) => this.teams().find(t => t.id === id) ?? null;
+  getRosterForTeam = (teamId: number) => this.rosters().find(r => r.teamId === teamId) ?? null;
+
+  getTradeProposalsForTeam = (teamId: number) => this.tradeProposals().filter(
+    t => t.receivingTeamId === teamId && t.status === 'pending'
+  );
+
+  getMatchupsForWeek = (week: number) => this.schedule().filter(m => m.week === week);
+  
+  // --- Date and Score Logic ---
   getCurrentFantasyWeek(): number {
     const now = new Date();
     const currentWeek = FANTASY_WEEKS.find(w => now >= w.start && now <= w.end);
-    return currentWeek ? currentWeek.week : 1;
+    if (currentWeek) {
+      return currentWeek.week;
+    }
+    // If not in any week, find the next upcoming week
+    const nextWeek = FANTASY_WEEKS.find(w => now < w.start);
+    if (nextWeek) {
+        return nextWeek.week;
+    }
+    // Otherwise, default to the last week of the season if it's over
+    return FANTASY_WEEKS[FANTASY_WEEKS.length - 1]?.week ?? 1;
+  }
+
+  getTotalFantasyWeeks(): number {
+    return FANTASY_WEEKS.length;
   }
   
   getWeekStatus(week: number): 'past' | 'current' | 'future' {
-      const now = new Date();
-      const weekInfo = FANTASY_WEEKS.find(w => w.week === week);
-      if (!weekInfo) return 'future';
-      if (now > weekInfo.end) return 'past';
-      if (now >= weekInfo.start && now <= weekInfo.end) return 'current';
-      return 'future';
-  }
+    const now = new Date();
+    const weekInfo = FANTASY_WEEKS.find(w => w.week === week);
+    if (!weekInfo) return 'future';
 
-  // --- Data Getters (now read from local signal cache) ---
-  getPlayers(): Player[] {
-    return this.players();
-  }
-
-  getPlayerById(id: number): Player | undefined {
-    return this.players().find(p => p.id === id);
+    if (now > weekInfo.end) return 'past';
+    if (now >= weekInfo.start && now <= weekInfo.end) return 'current';
+    return 'future';
   }
 
   getPlayerActualScore(playerId: number, week: number): number {
-      const weekStatus = this.getWeekStatus(week);
-      if (weekStatus === 'future') return 0;
-      const player = this.getPlayerById(playerId);
-      return player?.weeklyScores?.[week - 1] ?? 0;
-  }
-
-  getTeams(): Team[] {
-    return this.teams();
-  }
-
-  getTeamById(id: number): Team | undefined {
-    return this.teams().find(t => t.id === id);
-  }
-
-  getRosters(): Roster[] {
-    return this.rosters();
-  }
-
-  getRosterForTeam(teamId: number): Roster | undefined {
-    return this.rosters().find(r => r.teamId === teamId);
+    const weekStatus = this.getWeekStatus(week);
+    if (weekStatus === 'future') return 0;
+    
+    const player = this.getPlayerById(playerId);
+    return player?.weeklyScores?.[week - 1] ?? 0;
   }
   
-  getSchedule(): ScheduledMatchup[] {
-    return this.schedule();
-  }
-  
-  getMatchupsForWeek(week: number): ScheduledMatchup[] {
-      return this.schedule().filter(m => m.week === week);
-  }
-
-  getMyTeam(): Team | null {
-    const id = this.getLoggedInTeamId();
-    if (!id) return null;
-    return this.getTeamById(id) ?? null;
-  }
-
-  getMyRoster(): Roster | null {
-    const id = this.getLoggedInTeamId();
-    if (!id) return null;
-    return this.rosters().find(r => r.teamId === id) ?? null;
+  getPlayerProjectedScore(playerId: number, week: number): number {
+    const player = this.getPlayerById(playerId);
+    if (!player) return 0;
+    
+    // Base score is last week's score, or current week's score if it's week 1.
+    const baseScore = week > 1 
+      ? player.weeklyScores?.[week - 2] ?? player.weeklyScores?.[week - 1] ?? player.projectedPoints
+      : player.weeklyScores?.[week - 1] ?? player.projectedPoints;
+      
+    // Add a random variance between -3.0 and +3.0
+    const variance = (Math.random() * 6) - 3;
+    const projected = Math.max(0, baseScore + variance);
+    
+    return parseFloat(projected.toFixed(1));
   }
 
-  // --- Data Mutations (now write to Supabase DB) ---
+  // --- Team Appearance ---
+  getTeamColorClass(teamName: string): string {
+    const hash = teamName.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
+    const colors = ['text-team-pink', 'text-team-green', 'text-team-purple', 'text-team-blue'];
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  // --- Roster Management ---
   async updateRoster(starterIds: number[], benchIds: number[]): Promise<void> {
     const teamId = this.getLoggedInTeamId();
     if (!teamId) return;
@@ -238,75 +252,49 @@ export class SupabaseService {
       .update({ starters: starterIds, bench: benchIds })
       .eq('team_id', teamId);
   }
-
-  async addDropPlayer(playerToAddId: number, playerToDropId: number): Promise<void> {
-    const teamId = this.getLoggedInTeamId();
+  
+  async addDropPlayer(playerIdToAdd: number, playerIdToDrop: number): Promise<void> {
     const roster = this.getMyRoster();
-    if (!teamId || !roster) return;
+    if (!roster) return;
+
+    // Create new arrays
+    const newStarters = roster.starters.filter(id => id !== playerIdToDrop);
+    const newBench = roster.bench.filter(id => id !== playerIdToDrop);
     
-    // FIX: Handle null starter/bench arrays to prevent runtime errors.
-    const currentStarters = roster.starters ?? [];
-    const currentBench = roster.bench ?? [];
+    // Add the new player to the bench
+    newBench.push(playerIdToAdd);
 
-    const newStarters = currentStarters.filter(id => id !== playerToDropId);
-    const newBench = currentBench.filter(id => id !== playerToDropId);
-    newBench.push(playerToAddId);
-
-    await this.supabase
-      .from('rosters')
-      .update({ starters: newStarters, bench: newBench })
-      .eq('team_id', teamId);
+    await this.updateRoster(newStarters, newBench);
   }
 
-  // --- Trades ---
-  getTradeProposalsForTeam(teamId: number): TradeProposal[] {
-    return this.tradeProposals().filter(t => t.receivingTeamId === teamId && t.status === 'pending');
-  }
-
-  async createTradeProposal(receivingTeamId: number, playersOffered: number[], playersRequested: number[]): Promise<void> {
+  // --- Trade Logic ---
+  async createTradeProposal(receivingTeamId: number, playersOfferedIds: number[], playersRequestedIds: number[]): Promise<void> {
     const proposingTeamId = this.getLoggedInTeamId();
     if (!proposingTeamId) return;
-
-    const newProposal = {
+    
+    await this.supabase.from('trade_proposals').insert({
       proposing_team_id: proposingTeamId,
       receiving_team_id: receivingTeamId,
-      players_offered: playersOffered,
-      players_requested: playersRequested,
+      players_offered: playersOfferedIds,
+      players_requested: playersRequestedIds,
       status: 'pending'
-    };
-    
-    await this.supabase.from('trade_proposals').insert(newProposal);
-  }
-  
-  async rejectTrade(tradeId: number): Promise<void> {
-      await this.supabase
-        .from('trade_proposals')
-        .update({ status: 'rejected' })
-        .eq('id', tradeId);
+    });
   }
 
-  async acceptTrade(tradeId: number): Promise<{ success: boolean; error?: string }> {
-    const { error } = await this.supabase.rpc('accept_trade', { trade_id_param: tradeId });
+  async rejectTrade(tradeId: number): Promise<void> {
+    await this.supabase.from('trade_proposals').update({ status: 'rejected' }).eq('id', tradeId);
+  }
+
+  async acceptTrade(tradeId: number): Promise<{ success: boolean }> {
+    // We use a Supabase RPC function to handle the trade atomically.
+    const { error } = await this.supabase.rpc('accept_trade', {
+      trade_id: tradeId
+    });
+
     if (error) {
       console.error('Error accepting trade:', error);
-      return { success: false, error: error.message };
+      return { success: false };
     }
     return { success: true };
-  }
-  
-  // --- UI Helpers ---
-  getTeamColorClass(teamName: string): string {
-    switch (teamName.toLowerCase()) {
-      case 'swarchis':
-        return 'text-team-pink';
-      case 'gabriel':
-        return 'text-team-green';
-      case 'rihito':
-        return 'text-team-purple';
-      case 'daniel':
-        return 'text-team-blue';
-      default:
-        return 'text-gray-400';
-    }
   }
 }

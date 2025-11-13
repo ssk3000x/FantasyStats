@@ -31,6 +31,8 @@ export class MatchupComponent {
 
   myTeamId = computed(() => this.supabase.getLoggedInTeamId());
   currentWeek = signal<number>(this.supabase.getCurrentFantasyWeek());
+  totalWeeks = signal<number>(this.supabase.getTotalFantasyWeeks());
+  dataLoaded = this.supabase.dataLoaded;
   
   allMatchupsForWeek = computed(() => {
     return this.supabase.getMatchupsForWeek(this.currentWeek());

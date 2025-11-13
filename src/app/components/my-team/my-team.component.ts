@@ -10,6 +10,11 @@ interface TradeProposalDetails {
   playersRequested: Player[];
 }
 
+interface DisplayPlayer extends Player {
+  actualScore: number;
+  projectedScore: number;
+}
+
 @Component({
   selector: 'app-my-team',
   standalone: true,
@@ -26,8 +31,8 @@ export class MyTeamComponent {
   isEditing = signal(false);
   
   // For editing state
-  tempStarters = signal<Player[]>([]);
-  tempBench = signal<Player[]>([]);
+  tempStarters = signal<DisplayPlayer[]>([]);
+  tempBench = signal<DisplayPlayer[]>([]);
 
   pendingTrades = computed<TradeProposalDetails[]>(() => {
     const myTeamId = this.supabase.getLoggedInTeamId();
@@ -56,16 +61,31 @@ export class MyTeamComponent {
       .filter((p): p is Player => !!p);
   }
 
+  private populatePlayersWithScores(playerIds: number[]): DisplayPlayer[] {
+    const currentWeek = this.supabase.getCurrentFantasyWeek();
+    return playerIds
+      .map(id => {
+          const player = this.supabase.getPlayerById(id);
+          if (!player) return null;
+          return {
+              ...player,
+              actualScore: this.supabase.getPlayerActualScore(player.id, currentWeek),
+              projectedScore: this.supabase.getPlayerProjectedScore(player.id, currentWeek)
+          };
+      })
+      .filter((p): p is DisplayPlayer => !!p);
+  }
+
   starters = computed(() => {
     const roster = this.myRoster();
     if (!roster) return [];
-    return this.populatePlayers(roster.starters);
+    return this.populatePlayersWithScores(roster.starters);
   });
   
   bench = computed(() => {
     const roster = this.myRoster();
     if (!roster) return [];
-    return this.populatePlayers(roster.bench);
+    return this.populatePlayersWithScores(roster.bench);
   });
   
   teamColorClass = computed(() => {
@@ -103,13 +123,13 @@ export class MyTeamComponent {
   isRosterValid = computed(() => this.tempStarters().length === 4);
   canMoveToStarters = computed(() => this.tempStarters().length < 4);
 
-  moveToStarters(player: Player) {
+  moveToStarters(player: DisplayPlayer) {
     if (!this.canMoveToStarters()) return;
     this.tempBench.update(b => b.filter(p => p.id !== player.id));
     this.tempStarters.update(s => [...s, player]);
   }
 
-  moveToBench(player: Player) {
+  moveToBench(player: DisplayPlayer) {
     this.tempStarters.update(s => s.filter(p => p.id !== player.id));
     this.tempBench.update(b => [...b, player]);
   }
